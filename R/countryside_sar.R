@@ -15,7 +15,6 @@
 #' @param cluster_sizes Numerical vector that defines the amount of levels for the hierarchical "Clusters" approach as well as the amount of clusters within each level, e.g. c(1, 4, 16, 64, 256) -> 5 levels, first level 256 clusters, second level 64 clusters, etc.
 #' @param habitat Land-use raster of the sampling location, a .tif file.
 #' @param habitat_names Character vector with the names of the land-use types of the land-use raster defined in 'habitat'.
-#' @param habitat_codes Numerical vector of raster values corresponding to each habitat name.
 #' @param classification Species classification file. A table with a first column for species names and the following columns as binary (0/1) group indicators.
 #' @param groups Which group columns to use from classification (NULL = use all columns except first).
 #' @param seed Optional seed for reproducibility of random processes (circles starting point and k-means clustering).
@@ -56,7 +55,6 @@ countryside_sar <- function(
     # Habitat raster
     habitat = NULL,
     habitat_names = NULL,
-    habitat_codes = NULL,
     # Species classification
     classification = NULL,
     groups = NULL,
@@ -68,7 +66,11 @@ countryside_sar <- function(
     n_runs = 1
 ) {
 
-  # Optional: Set seed for reproducibility
+
+    # create vector for habitat codes of the raster
+   habitat_codes <- seq_along(habitat_names)
+    
+    # Optional: Set seed for reproducibility
   if (!is.null(seed)) set.seed(seed)
 
   # If needed: Coordinate transformation
