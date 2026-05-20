@@ -475,7 +475,7 @@ countryside_sar <- function(
 
   # ---- SAR analysis function ----
   analyze_sar <- function(results_table,
-                          method_used)
+                          method)
   {
     # Initialize results and check validity for further analysis
     sar_results <- list()
