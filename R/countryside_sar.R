@@ -547,6 +547,27 @@ countryside_sar <- function(
     return(sar_results)
   }
 
+      #------------ countryside SAR function----------
+  analyze_countrysar <- function(results, 
+                                 method, 
+                                 habitat_names, 
+                                 species_groups){
+    # Select result columns
+    datacsar <- results_table[, -c(4,5,7,10,11)]
+    
+    # Run countryside SAR analysis
+    res <- sar_countryside(
+      data = datacsar,
+      modType = "power",
+      gridStart = "partial",
+      habNam = habitat_names[-4],
+      spNam = species_group_names
+    )
+    
+    return(res)
+  }
+
+    
   #---------------------------- 4. Main processing -----------------------------
   points_sf <- sf::st_as_sf(data,
                             coords = c("long", "lat"),
