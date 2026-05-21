@@ -547,25 +547,80 @@ countryside_sar <- function(
     return(sar_results)
   }
 
-      #------------ countryside SAR function----------
-  analyze_countrysar <- function(results, 
-                                 method, 
-                                 habitat_names, 
-                                 species_groups){
-    # Select result columns
-    datacsar <- results_table[, -c(4,5,7,10,11)]
+   # ---- Countryside SAR analysis helper function ----
+analyze_countryside_sar <- function(results_table,
+                                    habitat_names,
+                                    species_group_names) {
+  
+  # Initialize results
+  csar_results <- list()
+  csar_results$valid <- FALSE
+  csar_results$message <- ""
+  
+  # Check if there is any data
+  if (nrow(results_table) == 0) {
+    csar_results$message <- "No data for countryside SAR analysis"
+    return(csar_results)
+  }
+  
+  # Filter out rows with zero or NA species
+  valid_rows <- results_table$Sp_Total > 0 & !is.na(results_table$Sp_Total) &
+    is.finite(results_table$Sp_Total)
+  
+  if (sum(valid_rows) < 2) {
+    csar_results$message <- paste("Insufficient non-zero samples for countryside SAR (need at least 2, have",
+                                  sum(valid_rows), ")")
+    return(csar_results)
+  }
+  
+  # Filter to valid rows only
+  valid_table <- results_table[valid_rows, ]
+  
+  # Prepare data for sar_countryside
+  # Need to remove columns that are not needed:
+  # - Keep habitat columns (already in results_table)
+  # - Keep species group columns (already in results_table)
+  # - Remove Area_Total, Sp_Total, Polygon_Area if present
+  cols_to_keep <- c(habitat_names, species_group_names)
+  cols_to_remove <- setdiff(names(valid_table), cols_to_keep)
+  
+  datacsar <- valid_table[, !names(valid_table) %in% cols_to_remove, drop = FALSE]
+  
+  # Ensure we have at least habitat and species columns
+  if (ncol(datacsar) < 2) {
+    csar_results$message <- "Insufficient columns for countryside SAR analysis"
+    return(csar_results)
+  }
+  
+  # Try to run countryside SAR with error handling
+  tryCatch({
+    # Check if sars package is available
+    if (!requireNamespace("sars", quietly = TRUE)) {
+      csar_results$message <- "Package 'sars' is required for countryside SAR analysis. Please install it."
+      csar_results$valid <- FALSE
+      return(csar_results)
+    }
     
-    # Run countryside SAR analysis
-    res <- sar_countryside(
+    # Run countryside SAR
+    csar_results$model <- sars::sar_countryside(
       data = datacsar,
       modType = "power",
       gridStart = "partial",
-      habNam = habitat_names[-4],
+      habNam = habitat_names,
       spNam = species_group_names
     )
     
-    return(res)
-  }
+    csar_results$valid <- TRUE
+    csar_results$message <- "Countryside SAR analysis completed successfully"
+    csar_results$summary <- summary(csar_results$model)
+    
+  }, error = function(e) {
+    csar_results$message <- paste("Error fitting countryside SAR model:", e$message)
+    csar_results$valid <- FALSE
+  })
+  
+  return(csar_results)
+}
 
     
   #---------------------------- 4. Main processing -----------------------------
