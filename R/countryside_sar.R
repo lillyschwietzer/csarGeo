@@ -661,25 +661,34 @@ analyze_countryside_sar <- function(results_table,
         species_group_names = grp_names
       )
 
-      # Perform SAR analysis
-      sar_analysis <- analyze_sar(results_table,
-                                  method)
+      # Perform standard SAR analysis
+      sar_analysis <- analyze_sar(results_table, method)
+
+      # Perform countryside SAR analysis 
+      csar_analysis <- analyze_countryside_sar(
+        results_table,
+        habitat_names,
+        species_group_names
+      )
 
       # Store results
       runs[[run]] <- list(
         run = run,
         results_table = results_table,
         sar_analysis = sar_analysis,
+        csar_analysis = csar_analysis,
         samples = samples,
         polygons = polygons
       )
     }
 
-    # Top-level sar_analysis from first run for easy access
+    # Top-level analyses from first run for easy access
     if (length(runs) > 0) {
       sar_analysis <- runs[[1]]$sar_analysis
+      csar_analysis <- runs[[1]]$csar_analysis
     } else {
       sar_analysis <- list(valid = FALSE, message = "No runs completed")
+      csar_analysis <- list(valid = FALSE, message = "No runs completed")
     }
 
     # results
@@ -688,6 +697,7 @@ analyze_countryside_sar <- function(results_table,
       n_runs = n_runs,
       runs = runs,
       sar_analysis = sar_analysis,
+      csar_analysis = csar_analysis,
       points_sf = points_sf,
       convex_hull = convex_hull,
       hull_source = ifelse(is.null(custom_hull), "derived", "custom")
@@ -719,9 +729,15 @@ analyze_countryside_sar <- function(results_table,
       species_group_names = grp_names
     )
 
-    # Perform SAR analysis
-    sar_analysis <- analyze_sar(results_table,
-                                method)
+    # Perform standard SAR analysis
+    sar_analysis <- analyze_sar(results_table, method)
+
+    # Perform countryside SAR analysis
+    csar_analysis <- analyze_countryside_sar(
+      results_table,
+      habitat_names,
+      species_group_names
+    )
 
     # result table
     res <- list(
@@ -731,13 +747,16 @@ analyze_countryside_sar <- function(results_table,
         run = 1,
         results_table = results_table,
         sar_analysis = sar_analysis,
+        csar_analysis = csar_analysis,
         samples = samples,
         squares_sf = squares_sf,
         clusters_chulls = clusters_chulls
       )),
+      sar_analysis = sar_analysis,
+      csar_analysis = csar_analysis,
       points_sf = points_sf
     )
   }
 
   return(res)
-}
+    }
