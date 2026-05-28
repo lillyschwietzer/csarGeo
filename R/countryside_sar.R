@@ -15,7 +15,6 @@
 #' @param cluster_sizes Numerical vector that defines the amount of levels for the hierarchical "Clusters" approach as well as the amount of clusters within each level, e.g. c(1, 4, 16, 64, 256) -> 5 levels, first level 256 clusters, second level 64 clusters, etc.
 #' @param habitat Land-use raster of the sampling location, a .tif file.
 #' @param habitat_names Character vector with the names of the land-use types of the land-use raster defined in 'habitat'.
-#' @param habitat_codes Numerical vector of raster values corresponding to each habitat name.
 #' @param classification Species classification file. A table with a first column for species names and the following columns as binary (0/1) group indicators.
 #' @param groups Which group columns to use from classification (NULL = use all columns except first).
 #' @param seed Optional seed for reproducibility of random processes (circles starting point and k-means clustering).
@@ -68,6 +67,9 @@ countryside_sar <- function(
     n_runs = 1
 ) {
 
+  # create vector for habitat codes of the raster
+  habitat_codes <- seq_along(habitat_names)
+    
   # Optional: Set seed for reproducibility
   if (!is.null(seed)) set.seed(seed)
 
@@ -109,7 +111,7 @@ countryside_sar <- function(
         utm_zone_max <- floor((max(lon_range) + 180) / 6) + 1
 
         if (utm_zone_max - utm_zone_min >= 1) {
-          warning("Your data spans multiple UTM zones (zones ", utm_zone_min, " to ", utm_zone_max, ").\n",
+          warning("Data spans multiple UTM zones (zones ", utm_zone_min, " to ", utm_zone_max, ").\n",
                   "  Using UTM zone ", utm_zone, " (EPSG:", target_crs, ") for the entire dataset.\n",
                   "  This approach may cause distortion at the edges. For better accuracy, please consider:\n",
                   "  - Using a national projection\n",
@@ -118,7 +120,7 @@ countryside_sar <- function(
 
         # Check for high latitudes
         if (max(abs(data$lat)) > 70) {
-          warning("Your data includes high latitudes (>70°). UTM projection may have significant distortion.\n",
+          warning("Data includes high latitudes (>70°). UTM projection may have significant distortion.\n",
                   "  Consider using a polar projection for better accuracy.")
         }
 
@@ -126,7 +128,7 @@ countryside_sar <- function(
         lon_span <- diff(range(data$long))
         lat_span <- diff(range(data$lat))
         if (lon_span > 20 || lat_span > 20) {
-          warning("Your data covers a large area (>20°). UTM projection may have significant distortion.\n",
+          warning("Data covers a large area (>20°). UTM projection may have significant distortion.\n",
                   "  Consider using an equal-area projection for better accuracy.")
         }
       }
@@ -475,12 +477,12 @@ countryside_sar <- function(
 
   # ---- SAR analysis function ----
   analyze_sar <- function(results_table,
-                          method)
+                          method_used)
   {
     # Initialize results and check validity for further analysis
     sar_results <- list()
     sar_results$valid <- FALSE
-    sar_results$message <- "" #here
+    sar_results$message <- ""
 
     # Check if there is any data for analysis
     if (nrow(results_table) == 0) {
@@ -547,82 +549,7 @@ countryside_sar <- function(
     return(sar_results)
   }
 
-   # ---- Countryside SAR analysis helper function ----
-analyze_countryside_sar <- function(results_table,
-                                    habitat_names,
-                                    species_group_names) {
-  
-  # Initialize results
-  csar_results <- list()
-  csar_results$valid <- FALSE
-  csar_results$message <- ""
-  
-  # Check if there is any data
-  if (nrow(results_table) == 0) {
-    csar_results$message <- "No data for countryside SAR analysis"
-    return(csar_results)
-  }
-  
-  # Filter out rows with zero or NA species
-  valid_rows <- results_table$Sp_Total > 0 & !is.na(results_table$Sp_Total) &
-    is.finite(results_table$Sp_Total)
-  
-  if (sum(valid_rows) < 2) {
-    csar_results$message <- paste("Insufficient non-zero samples for countryside SAR (need at least 2, have",
-                                  sum(valid_rows), ")")
-    return(csar_results)
-  }
-  
-  # Filter to valid rows only
-  valid_table <- results_table[valid_rows, ]
-  
-  # Prepare data for sar_countryside
-  # Need to remove columns that are not needed:
-  # - Keep habitat columns (already in results_table)
-  # - Keep species group columns (already in results_table)
-  # - Remove Area_Total, Sp_Total, Polygon_Area if present
-  cols_to_keep <- c(habitat_names, species_group_names)
-  cols_to_remove <- setdiff(names(valid_table), cols_to_keep)
-  
-  datacsar <- valid_table[, !names(valid_table) %in% cols_to_remove, drop = FALSE]
-  
-  # Ensure we have at least habitat and species columns
-  if (ncol(datacsar) < 2) {
-    csar_results$message <- "Insufficient columns for countryside SAR analysis"
-    return(csar_results)
-  }
-  
-  # Try to run countryside SAR with error handling
-  tryCatch({
-    # Check if sars package is available
-    if (!requireNamespace("sars", quietly = TRUE)) {
-      csar_results$message <- "Package 'sars' is required for countryside SAR analysis. Please install it."
-      csar_results$valid <- FALSE
-      return(csar_results)
-    }
-    
-    # Run countryside SAR
-    csar_results$model <- sars::sar_countryside(
-      data = datacsar,
-      modType = "power",
-      gridStart = "partial",
-      habNam = habitat_names,
-      spNam = species_group_names
-    )
-    
-    csar_results$valid <- TRUE
-    csar_results$message <- "Countryside SAR analysis completed successfully"
-    csar_results$summary <- summary(csar_results$model)
-    
-  }, error = function(e) {
-    csar_results$message <- paste("Error fitting countryside SAR model:", e$message)
-    csar_results$valid <- FALSE
-  })
-  
-  return(csar_results)
-}
 
-    
   #---------------------------- 4. Main processing -----------------------------
   points_sf <- sf::st_as_sf(data,
                             coords = c("long", "lat"),
@@ -661,34 +588,18 @@ analyze_countryside_sar <- function(results_table,
         species_group_names = grp_names
       )
 
-      # Perform standard SAR analysis
-      sar_analysis <- analyze_sar(results_table, method)
-
-      # Perform countryside SAR analysis 
-      csar_analysis <- analyze_countryside_sar(
-        results_table,
-        habitat_names,
-        species_group_names
-      )
+      # Perform SAR analysis
+      sar_analysis <- analyze_sar(results_table,
+                                  method)
 
       # Store results
       runs[[run]] <- list(
         run = run,
         results_table = results_table,
         sar_analysis = sar_analysis,
-        csar_analysis = csar_analysis,
         samples = samples,
         polygons = polygons
       )
-    }
-
-    # Top-level analyses from first run for easy access
-    if (length(runs) > 0) {
-      sar_analysis <- runs[[1]]$sar_analysis
-      csar_analysis <- runs[[1]]$csar_analysis
-    } else {
-      sar_analysis <- list(valid = FALSE, message = "No runs completed")
-      csar_analysis <- list(valid = FALSE, message = "No runs completed")
     }
 
     # results
@@ -696,8 +607,6 @@ analyze_countryside_sar <- function(results_table,
       method = method,
       n_runs = n_runs,
       runs = runs,
-      sar_analysis = sar_analysis,
-      csar_analysis = csar_analysis,
       points_sf = points_sf,
       convex_hull = convex_hull,
       hull_source = ifelse(is.null(custom_hull), "derived", "custom")
@@ -729,34 +638,22 @@ analyze_countryside_sar <- function(results_table,
       species_group_names = grp_names
     )
 
-    # Perform standard SAR analysis
-    sar_analysis <- analyze_sar(results_table, method)
-
-    # Perform countryside SAR analysis
-    csar_analysis <- analyze_countryside_sar(
-      results_table,
-      habitat_names,
-      species_group_names
-    )
+    # Perform SAR analysis
+    # if or both for normal sar and csar analysis
+    sar_analysis <- analyze_sar(results_table,
+                                method)
 
     # result table
     res <- list(
       method = method,
-      n_runs = 1,
-      runs = list(list(
-        run = 1,
         results_table = results_table,
         sar_analysis = sar_analysis,
-        csar_analysis = csar_analysis,
         samples = samples,
         squares_sf = squares_sf,
         clusters_chulls = clusters_chulls
-      )),
-      sar_analysis = sar_analysis,
-      csar_analysis = csar_analysis,
+      )
       points_sf = points_sf
-    )
   }
 
   return(res)
-    }
+}
