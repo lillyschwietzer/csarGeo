@@ -1,27 +1,24 @@
 #' Countryside-SAR
 #' @description
-#' A function to perform a complete SAR analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach, which assigns standardized squares to each sampling point and groups them in increasing size and decreasing count for each level.
+#' A function to perform a complete base SAR analysis or a countryside SAR (cSAR) analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. By choosing the "circles" pathway, the function samples species data in stepwise increasing circles, while "clusters" assigns standardized squares to each sampling point and then groups them in clusters of increasing size based on proximity. The sampled data is then aggregated and used for the SAR or cSAR analyis, the latter includes habitat affinity values of the species groups to different habitat types. 
 #'
-#' See Details for more information.
-#'
-#'
-#' @param data The provided dataset. It needs to be structured as following: the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.
-#' @param crs The coordinate reference system (CRS) of the sampling location.
-#' @param method Parameter to chose one analysis method: "circles" or "clusters". Both methods begin by transforming the table into an sf object and adding a joined geometry column. Pathway "Circles" then samples species data within a defined hull around all sampling points, beginning with a random starting point and in the steps defined by the parameter radius. The species count of all circles is then aggregated into one result table. Pathway "Clusters" assigns each sampling point a standardized square with the extent of square_size. The squares are then grouped based on cluster_sizes and the species data is again aggregated into a table.
-#' @param radius Defines the radius size as well as the total amount of circles for method: "Circles"
-#' @param break_threshold Initiates break-protocol for method "Circles" based on the proportion of the circular vector that lies inside the convex hull. E.g. break_threshold = 0.9 -> if less than 90 % of the circle lies inside of the hull, stop.
+#' @param data Binary species data table of the following structure: the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.
+#' @param crs Coordinate reference system (CRS) of the sampling location.
+#' @param method Parameter to select the sampling method: "circles" or "clusters". Pathway "circles" samples species data stepwise within a defined hull around all sampling points based on the parameter 'radius', beginning with a random starting point. Pathway "clusters" assigns each sampling point a standardized square with the extent of 'square_size'. The squares are then grouped according to 'cluster_sizes' based on their proximity to one another. The species count of all circles or clusters is then aggregated into one result table.
+#' @param radius Defines the radius size as well as the total amount of circles for method: "circles". E.g. c(2000 * 1:10), sample for 10 circles with an extent of 2000 units each.
+#' @param break_threshold Initiates break-protocol for method "circles" based on the proportion of the circular vector that lies inside the convex hull. E.g. break_threshold = 0.9 -> if less than 90 % of the circle lies inside of the hull, stop.
 #' @param custom_hull Import a polygon hull for method "circles". If method = "clusters" the function will ignore the imported hull and auto-generate a hull instead. If custom_hull = NULL, the function auto-generates a hull for method "circles".
-#' @param square_size The size of the square buffer for each sampling point for method "Clusters".
-#' @param cluster_sizes Numerical vector that defines the amount of levels for the hierarchical "Clusters" approach as well as the amount of clusters within each level, e.g. c(1, 4, 16, 64, 256) -> 5 levels, first level 256 clusters, second level 64 clusters, etc.
+#' @param square_size The size of the initial square buffer for each sampling point for method "clusters".
+#' @param cluster_sizes Numerical vector that defines the amount of levels as well as the amount of sampling points within each cluster of each level for the hierarchical "clusters" approach. E.g. c(1, 4, 16, 64, 256) -> 5 levels for 256 sampling points; first level 256 clusters, second level 64 clusters, etc.
 #' @param habitat Land-use raster of the sampling location, a .tif file.
-#' @param habitat_names Character vector with the names of the land-use types of the land-use raster defined in 'habitat'.
+#' @param habitat_names Character vector with the names of the land-use types 'habitat' land-use raster.
 #' @param classification Species classification file. A table with a first column for species names and the following columns as binary (0/1) group indicators.
-#' @param groups Which group columns to use from classification (NULL = use all columns except first).
-#' @param seed Optional seed for reproducibility of random processes (circles starting point and k-means clustering).
-#' @param transform_to_utm If TRUE, transforms geographic coordinates (long/lat) to UTM projection. It automatically detects the appropriate UTM zone based on mean longitude. If data was sampled in polar, equatorial or very large regions, please use an appropriate projection instead of UTM.
+#' @param groups Character vector to define the group columns used for analyis. If NULL = use all columns except first.
+#' @param seed Optional seed for reproducibility.
+#' @param transform_to_utm If TRUE, transforms geographic coordinates (long/lat) to UTM projection. It automatically detects the appropriate UTM zone based on mean longitude. If data was sampled in polar, equatorial or very large regions, use an appropriate projection instead of UTM.
 #' @param target_crs Optional numeric EPSG code for coordinate transformation. If provided it overrides the automatic UTM zone detection. Use this when you need a specific national or local projection instead of UTM.
 #' @param warn_projection Defaults to TRUE, will warn the user about possible projection issues.
-#' @param n_runs Option to run the function multiple times, default value = 1.
+#' @param n_runs Option to run the analyis multiple times, default value = 1. Only available for method "circles" as "clusters" is deterministic, multiple runs produce the same result.
 #'
 #' @return A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
 #' @export
