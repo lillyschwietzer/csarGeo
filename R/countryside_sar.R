@@ -66,6 +66,17 @@ countryside_sar <- function(
 
     # create vector for habitat codes of the raster
    habitat_codes <- seq_along(habitat_names)
+
+        # Add "Other" to habitat_names and habitat_values (if not already present)
+    if (!"Other" %in% habitat_names) {
+      habitat_names <- c(habitat_names, "Other")
+      habitat_values <- c(habitat_values, other_code)
+    }
+
+              # Calculate the "Other" code as max habitat value + 1 for reclass
+    other_code <- max(habitat_values) + 1
+
+    #-------------------------------------
     
     # Optional: Set seed for reproducibility
   if (!is.null(seed)) set.seed(seed)
@@ -246,48 +257,10 @@ countryside_sar <- function(
     stop("The following group columns are not in classification: ",
          paste(missing_cols, collapse = ", "))
 
-  #---------------------------- 2. Species group construction ------------------
-  # Species data
-  sp_cols <- 4:ncol(data) # species data starts at column 4
-  sp_names <- colnames(data)[sp_cols]
-  n_sp <- length(sp_cols) # number of species
-  clean_sp <- tolower(trimws(sp_names)) # clean species names for uniform formatting (lowercase, no space at the end or beginning)
+ 
+  #---------------------------- 2. Helper functions ----------------------------
 
-  # Classification data
-  classif_sp <- classification[[species_name_col]]
-  clean_classif <- tolower(trimws(classif_sp))
-
-  # Lists for species groups and group names
-  sp_groups <- list()
-  grp_names <- character()
-
-  for (col in group_cols) {
-    vals <- classification[[col]]
-
-    if (is.logical(vals)) {
-      idx <- which(vals)
-    } else if (is.numeric(vals)) {
-      idx <- which(vals == 1)
-    } else {
-      stop("Group column '", col, "' must be logical or numeric (0/1).")
-    }
-
-    sp_clean <- clean_classif[idx]
-    positions <- na.omit(match(sp_clean, clean_sp))
-
-    if (length(positions) > 0) {
-      sp_groups <- c(sp_groups, list(positions))
-      grp_names <- c(grp_names, paste0("Sp_", col))
-    }
-  }
-
-  for (i in seq_along(sp_groups)) {
-    if (any(sp_groups[[i]] < 1 | sp_groups[[i]] > n_sp))
-      stop("Error: group indices out of range.")
-  }
-
-  #---------------------------- 3. Helper functions ----------------------------
-
+    # Helper "circles"
   filter_points_in_expanding_circles <- function(points_sf,
                                                  radius_vector,
                                                  convex_hull,
@@ -314,7 +287,6 @@ countryside_sar <- function(
     return(points_within_circles)
   }
 
-
   summarize_samples <- function(samples,
                                 polygons,
                                 habitat_raster,
@@ -323,14 +295,7 @@ countryside_sar <- function(
                                 species_groups,
                                 species_group_names)
   {
-    # Calculate the "Other" code as max habitat value + 1 for reclass
-    other_code <- max(habitat_values) + 1
 
-    # Add "Other" to habitat_names and habitat_values (if not already present)
-    if (!"Other" %in% habitat_names) {
-      habitat_names <- c(habitat_names, "Other")
-      habitat_values <- c(habitat_values, other_code)
-    }
 
     # Initialize an empty data frame for the results (added Polygon_Area for comparison with calculated Area_Total)
     results_df <- data.frame(matrix(ncol = length(habitat_names)+
@@ -362,7 +327,7 @@ countryside_sar <- function(
       # Ensure all possible values are included (now includes other_code)
       all_values_df <- data.frame(value = habitat_values, count = 0)
 
-      # Merge with actual frequency data, replacing 0 where missing
+      # Merge with actual frequency data
       habitat_df <- merge(all_values_df, habitat_df, by = "value", all.x = TRUE)
 
       # Fill NA counts with 0
@@ -407,7 +372,7 @@ countryside_sar <- function(
     # Calculate half-width (to shift the square corners)
     half_width <- width / 2
     squares_sf <- sf::st_as_sf(sf::st_buffer(points_sf, dist = half_width, endCapStyle = "SQUARE"))
-    return(squares_sf)
+    return(squares_sf) # squares centered on the sampling points
   }
 
 
@@ -418,20 +383,23 @@ countryside_sar <- function(
     npoints <- nrow(points_sf)
     n_clusters_vector <- npoints %/% cluster_size_vector
     n_clusters_vector[n_clusters_vector == 0] <- 1  # when whole landscape, npoints < cluster_size
+
+    # result list
     points_within_clusters <- list()
 
-    for (i in seq_along(cluster_size_vector)) #here
+    for (i in seq_along(cluster_size_vector)) 
     {
-      n_clusters <- n_clusters_vector[i] #here
-      size_val <- cluster_size_vector[i] #here
+      n_clusters <- n_clusters_vector[i] 
+      size_val <- cluster_size_vector[i] # cluster size index for results
 
-      if (n_clusters == npoints)
+      if (n_clusters == npoints) # as many points as clusters
       {
         points_in_clusters <- split(points_sf, 1:npoints)
         clusters_convex_hulls <- split(sf::st_geometry(squares_sf), 1:npoints)
 
-      } else
+      } else # less points than clusters
       {
+        # proximity-based k-means clustering
         coords <- sf::st_coordinates(points_sf)
         kmeans_result <- kmeans(coords, centers = n_clusters, iter.max = 100, nstart = 25)
         cluster_assignments <- kmeans_result$cluster
@@ -471,6 +439,29 @@ countryside_sar <- function(
     return(points_within_clusters)
   }
 
+extract_species_positions <- function(classification, 
+                                      data) {
+  # Get habitat names
+  habitat_names <- colnames(classification[,-1])
+  
+  # Initialize a list to store species positions for each habitat
+  habitat_positions <- list()
+  
+  # Loop through each habitat
+  for (habitat in habitat_names) {
+    # Get species associated with this habitat
+    species_in_habitat <- 
+      rownames(classification)[classification[, habitat] == 1] # returns TRUE or FALSE
+    
+    # Find positions (indices) of these species in the species-site matrix
+    species_positions <- which(rownames(data) %in% species_in_habitat)
+    
+    # Store results in the list
+    habitat_positions[[habitat]] <- species_positions
+  }
+  
+  return(habitat_positions)
+}
 
   # ---- SAR analysis function ----
   analyze_sar <- function(results_table,
@@ -627,6 +618,9 @@ countryside_sar <- function(
 
     samples_points <- lapply(samples, `[[`, "points")
     clusters_chulls <- lapply(samples, `[[`, "chulls")
+
+    species_groups <- extract_species_positions (classification,
+                                                 data[,-1])
 
     # Flatten the nested lists for summarize_samples
     samples_flat <- unlist(samples_points, recursive = FALSE)
