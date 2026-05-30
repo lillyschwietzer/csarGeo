@@ -63,18 +63,8 @@ countryside_sar <- function(
     n_runs = 1
 ) {
 
-
     # create vector for habitat codes of the raster
    habitat_codes <- seq_along(habitat_names)
-
-        # Add "Other" to habitat_names and habitat_values (if not already present)
-    if (!"Other" %in% habitat_names) {
-      habitat_names <- c(habitat_names, "Other")
-      habitat_values <- c(habitat_values, other_code)
-    }
-
-              # Calculate the "Other" code as max habitat value + 1 for reclass
-    other_code <- max(habitat_values) + 1
 
     #-------------------------------------
     
@@ -295,7 +285,15 @@ countryside_sar <- function(
                                 species_groups,
                                 species_group_names)
   {
+      
+    # Calculate the "Other" code as max habitat value + 1 for reclass
+    other_code <- max(habitat_values) + 1
 
+   # Add "Other" to habitat_names and habitat_values if it's not present in the data
+   if (!any(tolower(habitat_names) == "other")) {
+     habitat_names <- c(habitat_names, "Other")
+     habitat_values <- c(habitat_values, other_code)
+   }
 
     # Initialize an empty data frame for the results (added Polygon_Area for comparison with calculated Area_Total)
     results_df <- data.frame(matrix(ncol = length(habitat_names)+
