@@ -616,11 +616,11 @@ extract_species_positions <- function(classification,
                                          squares_sf,
                                          cluster_sizes)
 
-    samples_points <- lapply(samples, `[[`, "points")
-    clusters_chulls <- lapply(samples, `[[`, "chulls")
-
     species_groups <- extract_species_positions (classification,
                                                  data[,-1])
+      
+    samples_points <- lapply(samples, `[[`, "points")
+    clusters_chulls <- lapply(samples, `[[`, "chulls")
 
     # Flatten the nested lists for summarize_samples
     samples_flat <- unlist(samples_points, recursive = FALSE)
@@ -632,7 +632,7 @@ extract_species_positions <- function(classification,
       habitat_raster = habitat,
       habitat_names = habitat_names,
       habitat_values = habitat_codes,
-      species_groups = sp_groups,
+      species_groups = species_groups,
       species_group_names = grp_names
     )
 
