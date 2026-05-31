@@ -437,10 +437,10 @@ countryside_sar <- function(
     return(points_within_clusters)
   }
 
-extract_species_positions <- function(classification, 
-                                      data) {
+extract_species_positions <- function(species_habitat_matrix, 
+                                      species_site_matrix) {
   # Get habitat names
-  habitat_names <- colnames(classification[,-1])
+  habitat_names <- colnames(species_habitat_matrix[,-1])
   
   # Initialize a list to store species positions for each habitat
   habitat_positions <- list()
@@ -449,10 +449,10 @@ extract_species_positions <- function(classification,
   for (habitat in habitat_names) {
     # Get species associated with this habitat
     species_in_habitat <- 
-      rownames(classification)[classification[, habitat] == 1] # returns TRUE or FALSE
+      rownames(species_habitat_matrix)[species_habitat_matrix[, habitat] == 1] # returns TRUE or FALSE
     
     # Find positions (indices) of these species in the species-site matrix
-    species_positions <- which(rownames(data) %in% species_in_habitat)
+    species_positions <- which(rownames(species_site_matrix) %in% species_in_habitat)
     
     # Store results in the list
     habitat_positions[[habitat]] <- species_positions
@@ -614,8 +614,9 @@ extract_species_positions <- function(classification,
                                          squares_sf,
                                          cluster_sizes)
 
-    species_groups <- extract_species_positions (classification,
-                                                 data[,-1])
+    species_sites <- points_sf[,-1]
+    species_groups <- extract_species_positions (species_habitat_matrix = classif, 
+                                      species_site_matrix = species_sites)
       
     samples_points <- lapply(samples, `[[`, "points")
     clusters_chulls <- lapply(samples, `[[`, "chulls")
@@ -631,7 +632,7 @@ extract_species_positions <- function(classification,
       habitat_names = habitat_names,
       habitat_values = habitat_codes,
       species_groups = species_groups,
-      species_group_names = grp_names
+      species_group_names = names(species_groups)
     )
 
     # Perform SAR analysis
