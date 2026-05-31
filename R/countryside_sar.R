@@ -250,34 +250,7 @@ countryside_sar <- function(
  
   #---------------------------- 2. Helper functions ----------------------------
 
-    # Helper "circles"
-  filter_points_in_expanding_circles <- function(points_sf,
-                                                 radius_vector,
-                                                 convex_hull,
-                                                 break_threshold) {
-    # Randomly selected point of sampling start
-    selected_point <- points_sf[sample(1:nrow(points_sf), 1), ]
-    points_within_circles <- list()
-
-    # Loop through the radius_vector
-    for (radius in radius_vector) {
-      circle <- sf::st_geometry(sf::st_buffer(selected_point, dist = radius))
-      intersection <- sf::st_intersection(circle, convex_hull)
-      circle_area <- as.numeric(sf::st_area(circle))
-      intersection_area <- as.numeric(sf::st_area(intersection))
-
-      if (intersection_area / circle_area < break_threshold) {
-        break
-      }
-
-      points_in_circle <- points_sf[sf::st_intersects(points_sf, circle, sparse = FALSE), ]
-      points_within_circles[[paste0("radius_", radius)]] <-
-        list(points = points_in_circle, circle = circle)
-    }
-    return(points_within_circles)
-  }
-
-  summarize_samples <- function(samples,
+     summarize_samples <- function(samples,
                                 polygons,
                                 habitat_raster,
                                 habitat_names,
@@ -360,6 +333,37 @@ countryside_sar <- function(
 
     return(results_df)
   }
+    
+     if (method == "circles")
+  {
+    # Helper "circles"
+  filter_points_in_expanding_circles <- function(points_sf,
+                                                 radius_vector,
+                                                 convex_hull,
+                                                 break_threshold) {
+    # Randomly selected point of sampling start
+    selected_point <- points_sf[sample(1:nrow(points_sf), 1), ]
+    points_within_circles <- list()
+
+    # Loop through the radius_vector
+    for (radius in radius_vector) {
+      circle <- sf::st_geometry(sf::st_buffer(selected_point, dist = radius))
+      intersection <- sf::st_intersection(circle, convex_hull)
+      circle_area <- as.numeric(sf::st_area(circle))
+      intersection_area <- as.numeric(sf::st_area(intersection))
+
+      if (intersection_area / circle_area < break_threshold) {
+        break
+      }
+
+      points_in_circle <- points_sf[sf::st_intersects(points_sf, circle, sparse = FALSE), ]
+      points_within_circles[[paste0("radius_", radius)]] <-
+        list(points = points_in_circle, circle = circle)
+    }
+    return(points_within_circles)
+  }
+
+ }
 
 
   create_squares <- function(points_sf,
@@ -373,6 +377,8 @@ countryside_sar <- function(
     return(squares_sf) # squares centered on the sampling points
   }
 
+    else
+  {
 
   filter_points_in_clusters <- function(points_sf,
                                         squares_sf,
@@ -435,7 +441,7 @@ countryside_sar <- function(
     }
 
     return(points_within_clusters)
-  }
+}
 
 extract_species_positions <- function(species_habitat_matrix, 
                                       species_site_matrix) {
@@ -459,8 +465,8 @@ extract_species_positions <- function(species_habitat_matrix,
   }
   
   return(habitat_positions)
+ }
 }
-
   # ---- SAR analysis function ----
   analyze_sar <- function(results_table,
                           method_used)
