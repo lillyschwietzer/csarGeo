@@ -1,6 +1,6 @@
 #' Countryside-SAR
 #' @description
-#' A function to perform a complete base SAR analysis or a countryside SAR (cSAR) analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. By choosing the "circles" pathway, the function samples species data in stepwise increasing circles, while "clusters" assigns standardized squares to each sampling point and then groups them in clusters of increasing size based on proximity. The sampled data is then aggregated and used for the SAR or cSAR analyis, the latter includes habitat affinity values of the species groups to different habitat types. 
+#' A function to perform a complete base SAR analysis or a countryside SAR (cSAR) analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. By choosing the "circles" pathway, the function samples species data in stepwise increasing circles, while "clusters" assigns standardized squares to each sampling point and then groups them in clusters of increasing size based on proximity. The sampled data is then aggregated and used for the SAR or cSAR analyis, the latter includes habitat affinity values of the species groups to different habitat types.
 #'
 #' @param data Binary species data table of the following structure: the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.
 #' @param crs Coordinate reference system (CRS) of the sampling location.
@@ -13,7 +13,7 @@
 #' @param habitat Land-use raster of the sampling location, a .tif file.
 #' @param habitat_names Character vector with the names of the land-use types 'habitat' land-use raster.
 #' @param classification Species classification file. A table with a first column for species names and the following columns as binary (0/1) group indicators.
-#' @param groups Character vector to define the group columns used for analyis. If NULL = use all columns except first.
+#' @param groups Character vector to define the group columns used for analysis. If NULL = use all columns except first.
 #' @param seed Optional seed for reproducibility.
 #' @param transform_to_utm If TRUE, transforms geographic coordinates (long/lat) to UTM projection. It automatically detects the appropriate UTM zone based on mean longitude. If data was sampled in polar, equatorial or very large regions, use an appropriate projection instead of UTM.
 #' @param target_crs Optional numeric EPSG code for coordinate transformation. If provided it overrides the automatic UTM zone detection. Use this when you need a specific national or local projection instead of UTM.
@@ -61,21 +61,18 @@ countryside_sar <- function(
     target_crs = NULL,
     warn_projection = TRUE,
     n_runs = 1
-) {
+)  {
 
-    # create vector for habitat codes of the raster
-   habitat_codes <- seq_along(habitat_names)
+  # create vector for habitat codes of the raster
+  habitat_codes <- seq_along(habitat_names)
 
-    #-------------------------------------
-    
-    # Optional: Set seed for reproducibility
+  #-------------------------------------
+
+  # Optional: Set seed for reproducibility
   if (!is.null(seed)) set.seed(seed)
 
-  # If needed: Coordinate transformation
+  # If needed: Coordinate transformation (user must provide target_crs)
   if (transform_to_utm) {
-
-    # Store original data
-    original_data <- data
 
     # Check if coordinates are already projected
     if (any(abs(data$long) > 180) || any(abs(data$lat) > 90)) {
@@ -83,66 +80,18 @@ countryside_sar <- function(
            "Set transform_to_utm = FALSE or check your data.")
     }
 
+    # Validate target_crs is provided
+    if (is.null(target_crs)) {
+      stop("When transform_to_utm = TRUE, you must provide 'target_crs' (e.g., 3763 for Portugal TM06)")
+    }
+
+    # Validate target_crs is numeric
+    if (!is.numeric(target_crs)) {
+      stop("target_crs must be a numeric EPSG code (e.g., 3763 for Portugal TM06)")
+    }
+
     # Create sf object with user-provided CRS
     points_sf_original <- sf::st_as_sf(data, coords = c("long", "lat"), crs = crs)
-
-    # Determine target CRS
-    if (is.null(target_crs)) {
-      # Auto-detect UTM zone
-      mean_lon <- mean(data$long, na.rm = TRUE)
-      mean_lat <- mean(data$lat, na.rm = TRUE)
-      utm_zone <- floor((mean_lon + 180) / 6) + 1
-      utm_zone <- max(1, min(60, utm_zone))
-      hemisphere <- ifelse(mean_lat >= 0, "N", "S")
-
-      if (hemisphere == "N") {
-        target_crs <- 32600 + utm_zone
-      } else {
-        target_crs <- 32700 + utm_zone
-      }
-
-      # Projection limitation warnings:
-      if (warn_projection) {
-        # Check if data spans UTM zones
-        lon_range <- range(data$long, na.rm = TRUE)
-        utm_zone_min <- floor((min(lon_range) + 180) / 6) + 1
-        utm_zone_max <- floor((max(lon_range) + 180) / 6) + 1
-
-        if (utm_zone_max - utm_zone_min >= 1) {
-          warning("Your data spans multiple UTM zones (zones ", utm_zone_min, " to ", utm_zone_max, ").\n",
-                  "  Using UTM zone ", utm_zone, " (EPSG:", target_crs, ") for the entire dataset.\n",
-                  "  This approach may cause distortion at the edges. For better accuracy, please consider:\n",
-                  "  - Using a national projection\n",
-                  "  - Specifying target_crs manually with an appropriate projection")
-        }
-
-        # Check for high latitudes
-        if (max(abs(data$lat)) > 70) {
-          warning("Your data includes high latitudes (>70°). UTM projection may have significant distortion.\n",
-                  "  Consider using a polar projection for better accuracy.")
-        }
-
-        # Check for very large extent
-        lon_span <- diff(range(data$long))
-        lat_span <- diff(range(data$lat))
-        if (lon_span > 20 || lat_span > 20) {
-          warning("Your data covers a large area (>20°). UTM projection may have significant distortion.\n",
-                  "  Consider using an equal-area projection for better accuracy.")
-        }
-      }
-
-    } else {
-      # User specified target_crs - validate it's numeric
-      if (!is.numeric(target_crs)) {
-        stop("target_crs must be a numeric EPSG code (e.g., 3763 for Portugal TM06)")
-      }
-
-      # Optional warning if using non-UTM projection
-      if (warn_projection && !(target_crs %in% c(32601:32660, 32701:32760))) {
-        warning("You specified a non-UTM projection (EPSG:", target_crs, ").\n",
-                "  Ensure this projection is appropriate for your study area.")
-      }
-    }
 
     # Transform coordinates
     points_sf_transformed <- sf::st_transform(points_sf_original, crs = target_crs)
@@ -247,10 +196,189 @@ countryside_sar <- function(
     stop("The following group columns are not in classification: ",
          paste(missing_cols, collapse = ", "))
 
- 
-  #---------------------------- 2. Helper functions ----------------------------
 
-     summarize_samples <- function(samples,
+  #----------------------- 2. Species group construction for circles -----------
+  if (method == "circles"){
+  # Species data
+  sp_cols <- 4:ncol(data) # species data starts at column 4
+  sp_names <- colnames(data)[sp_cols]
+  n_sp <- length(sp_cols) # number of species
+  clean_sp <- tolower(trimws(sp_names)) # clean species names for uniform formatting (lowercase, no space at the end or beginning)
+
+  # Classification data
+  classif_sp <- classification[[species_name_col]]
+  clean_classif <- tolower(trimws(classif_sp))
+
+  # Lists for species groups and group names
+  sp_groups <- list()
+  grp_names <- character()
+
+  for (col in group_cols) {
+    vals <- classification[[col]]
+
+    if (is.logical(vals)) {
+      idx <- which(vals)
+    } else if (is.numeric(vals)) {
+      idx <- which(vals == 1)
+    } else {
+      stop("Group column '", col, "' must be logical or numeric (0/1).")
+    }
+
+    sp_clean <- clean_classif[idx]
+    positions <- na.omit(match(sp_clean, clean_sp))
+
+    if (length(positions) > 0) {
+      sp_groups <- c(sp_groups, list(positions))
+      grp_names <- c(grp_names, paste0("Sp_", col))
+    }
+  }
+
+  for (i in seq_along(sp_groups)) {
+    if (any(sp_groups[[i]] < 1 | sp_groups[[i]] > n_sp))
+      stop("Error: group indices out of range.")
+  }
+
+  # Create name alias for helper functions (summarize_samples, countryside SAR)
+  species_group_names <- grp_names
+  }
+
+  #---------------------------- 3. Helper functions ----------------------------
+
+  if (method == "circles")
+  {
+  # Helper "circles"
+  filter_points_in_expanding_circles <- function(points_sf,
+                                                 radius_vector,
+                                                 convex_hull,
+                                                 break_threshold) {
+    # Randomly selected point of sampling start
+    selected_point <- points_sf[sample(1:nrow(points_sf), 1), ]
+    points_within_circles <- list()
+
+    # Loop through the radius_vector
+    for (radius in radius_vector) {
+      circle <- sf::st_geometry(sf::st_buffer(selected_point, dist = radius))
+
+      # break protocol
+      intersection <- sf::st_intersection(circle, convex_hull)
+      circle_area <- as.numeric(sf::st_area(circle))
+      intersection_area <- as.numeric(sf::st_area(intersection))
+
+      if (intersection_area / circle_area < break_threshold) {
+        break
+      }
+
+      points_in_circle <- points_sf[sf::st_intersects(points_sf, circle, sparse = FALSE), ]
+      points_within_circles[[paste0("radius_", radius)]] <-
+        list(points = points_in_circle, circle = circle)
+    }
+    return(points_within_circles)
+  }
+
+  } else
+    {
+
+  create_squares <- function(points_sf,
+                             width)
+  {
+    if (!inherits(points_sf, "sf") || !inherits(sf::st_geometry(points_sf), "sfc_POINT"))
+      stop("Input must be an sf object with point geometries.")
+    # Calculate half-width (to shift the square corners)
+    half_width <- width / 2
+    squares_sf <- sf::st_as_sf(sf::st_buffer(points_sf, dist = half_width, endCapStyle = "SQUARE"))
+    return(squares_sf) # squares centered on the sampling points
+  }
+
+
+  filter_points_in_clusters <- function(points_sf,
+                                        squares_sf,
+                                        cluster_size_vector)
+  {
+    npoints <- nrow(points_sf)
+    n_clusters_vector <- npoints %/% cluster_size_vector
+    n_clusters_vector[n_clusters_vector == 0] <- 1  # when whole landscape, npoints < cluster_size
+
+    # result list
+    points_within_clusters <- list()
+
+    for (i in seq_along(cluster_size_vector))
+    {
+      n_clusters <- n_clusters_vector[i]
+      size_val <- cluster_size_vector[i] # cluster size index for results
+
+      if (n_clusters == npoints) # as many points as clusters
+      {
+        points_in_clusters <- split(points_sf, 1:npoints)
+        clusters_convex_hulls <- split(sf::st_geometry(squares_sf), 1:npoints)
+
+      } else # less points than clusters
+      {
+        # proximity-based k-means clustering
+        coords <- sf::st_coordinates(points_sf)
+        kmeans_result <- kmeans(coords, centers = n_clusters, iter.max = 100, nstart = 25)
+        cluster_assignments <- kmeans_result$cluster
+
+        points_in_clusters <- list()
+        squares_in_clusters <- list()
+
+        for (c in 1:n_clusters)
+        {
+          cluster_idx <- which(cluster_assignments == c)
+          points_in_clusters[[c]] <- points_sf[cluster_idx, ]
+          squares_in_clusters[[c]] <- squares_sf[cluster_idx, ]
+        }
+
+        clusters_convex_hulls <- list()
+        for (j in seq_along(squares_in_clusters))
+        {
+          n_sq <- nrow(squares_in_clusters[[j]])
+
+          if (n_sq == 0)
+          {
+            warning("Cluster ", j, " has zero squares – skipping")
+            next
+          }
+
+          merged <- sf::st_union(squares_in_clusters[[j]])
+          hull <- sf::st_convex_hull(merged)
+          clusters_convex_hulls[[j]] <- hull
+        }
+      }
+
+      level_name <- paste0("size_", size_val)
+      points_within_clusters[[level_name]] <-
+        list(points = points_in_clusters, chulls = clusters_convex_hulls)
+    }
+
+    return(points_within_clusters)
+  }
+
+  extract_species_positions <- function(species_habitat_matrix,
+                                        species_site_matrix) {
+    # Get habitat names
+    habitat_names <- colnames(species_habitat_matrix[,-1])
+
+    # Initialize a list to store species positions for each habitat
+    habitat_positions <- list()
+
+    # Loop through each habitat
+    for (habitat in habitat_names) {
+      # Get species associated with this habitat
+      species_in_habitat <-
+        rownames(species_habitat_matrix)[species_habitat_matrix[, habitat] == 1] # returns TRUE or FALSE
+
+      # Find positions (indices) of these species in the species-site matrix
+      species_positions <- which(rownames(species_site_matrix) %in% species_in_habitat)
+
+      # Store results in the list
+      habitat_positions[[habitat]] <- species_positions
+    }
+
+    return(habitat_positions)
+  }
+ }
+
+  summarize_samples <- function(samples,
                                 polygons,
                                 habitat_raster,
                                 habitat_names,
@@ -258,15 +386,15 @@ countryside_sar <- function(
                                 species_groups,
                                 species_group_names)
   {
-      
+
     # Calculate the "Other" code as max habitat value + 1 for reclass
     other_code <- max(habitat_values) + 1
 
-   # Add "Other" to habitat_names and habitat_values if it's not present in the data
-   if (!any(tolower(habitat_names) == "other")) {
-     habitat_names <- c(habitat_names, "Other")
-     habitat_values <- c(habitat_values, other_code)
-   }
+    # Add "Other" to habitat_names and habitat_values if it's not present in the data
+    if (!any(tolower(habitat_names) == "other")) {
+      habitat_names <- c(habitat_names, "Other")
+      habitat_values <- c(habitat_values, other_code)
+    }
 
     # Initialize an empty data frame for the results (added Polygon_Area for comparison with calculated Area_Total)
     results_df <- data.frame(matrix(ncol = length(habitat_names)+
@@ -333,141 +461,8 @@ countryside_sar <- function(
 
     return(results_df)
   }
-    
-     if (method == "circles")
-  {
-    # Helper "circles"
-  filter_points_in_expanding_circles <- function(points_sf,
-                                                 radius_vector,
-                                                 convex_hull,
-                                                 break_threshold) {
-    # Randomly selected point of sampling start
-    selected_point <- points_sf[sample(1:nrow(points_sf), 1), ]
-    points_within_circles <- list()
 
-    # Loop through the radius_vector
-    for (radius in radius_vector) {
-      circle <- sf::st_geometry(sf::st_buffer(selected_point, dist = radius))
-      intersection <- sf::st_intersection(circle, convex_hull)
-      circle_area <- as.numeric(sf::st_area(circle))
-      intersection_area <- as.numeric(sf::st_area(intersection))
-
-      if (intersection_area / circle_area < break_threshold) {
-        break
-      }
-
-      points_in_circle <- points_sf[sf::st_intersects(points_sf, circle, sparse = FALSE), ]
-      points_within_circles[[paste0("radius_", radius)]] <-
-        list(points = points_in_circle, circle = circle)
-    }
-    return(points_within_circles)
-  }
-
- }
-
-
-  create_squares <- function(points_sf,
-                             width)
-  {
-    if (!inherits(points_sf, "sf") || !inherits(sf::st_geometry(points_sf), "sfc_POINT"))
-      stop("Input must be an sf object with point geometries.")
-    # Calculate half-width (to shift the square corners)
-    half_width <- width / 2
-    squares_sf <- sf::st_as_sf(sf::st_buffer(points_sf, dist = half_width, endCapStyle = "SQUARE"))
-    return(squares_sf) # squares centered on the sampling points
-  }
-
-    else
-  {
-
-  filter_points_in_clusters <- function(points_sf,
-                                        squares_sf,
-                                        cluster_size_vector)
-  {
-    npoints <- nrow(points_sf)
-    n_clusters_vector <- npoints %/% cluster_size_vector
-    n_clusters_vector[n_clusters_vector == 0] <- 1  # when whole landscape, npoints < cluster_size
-
-    # result list
-    points_within_clusters <- list()
-
-    for (i in seq_along(cluster_size_vector)) 
-    {
-      n_clusters <- n_clusters_vector[i] 
-      size_val <- cluster_size_vector[i] # cluster size index for results
-
-      if (n_clusters == npoints) # as many points as clusters
-      {
-        points_in_clusters <- split(points_sf, 1:npoints)
-        clusters_convex_hulls <- split(sf::st_geometry(squares_sf), 1:npoints)
-
-      } else # less points than clusters
-      {
-        # proximity-based k-means clustering
-        coords <- sf::st_coordinates(points_sf)
-        kmeans_result <- kmeans(coords, centers = n_clusters, iter.max = 100, nstart = 25)
-        cluster_assignments <- kmeans_result$cluster
-
-        points_in_clusters <- list()
-        squares_in_clusters <- list()
-
-        for (c in 1:n_clusters)
-        {
-          cluster_idx <- which(cluster_assignments == c)
-          points_in_clusters[[c]] <- points_sf[cluster_idx, ]
-          squares_in_clusters[[c]] <- squares_sf[cluster_idx, ]
-        }
-
-        clusters_convex_hulls <- list()
-        for (j in seq_along(squares_in_clusters))
-        {
-          n_sq <- nrow(squares_in_clusters[[j]])
-
-          if (n_sq == 0)
-          {
-            warning("Cluster ", j, " has zero squares – skipping")
-            next
-          }
-
-          merged <- sf::st_union(squares_in_clusters[[j]])
-          hull <- sf::st_convex_hull(merged)
-          clusters_convex_hulls[[j]] <- hull
-        }
-      }
-
-      level_name <- paste0("size_", size_val)
-      points_within_clusters[[level_name]] <-
-        list(points = points_in_clusters, chulls = clusters_convex_hulls)
-    }
-
-    return(points_within_clusters)
-}
-
-extract_species_positions <- function(species_habitat_matrix, 
-                                      species_site_matrix) {
-  # Get habitat names
-  habitat_names <- colnames(species_habitat_matrix[,-1])
-  
-  # Initialize a list to store species positions for each habitat
-  habitat_positions <- list()
-  
-  # Loop through each habitat
-  for (habitat in habitat_names) {
-    # Get species associated with this habitat
-    species_in_habitat <- 
-      rownames(species_habitat_matrix)[species_habitat_matrix[, habitat] == 1] # returns TRUE or FALSE
-    
-    # Find positions (indices) of these species in the species-site matrix
-    species_positions <- which(rownames(species_site_matrix) %in% species_in_habitat)
-    
-    # Store results in the list
-    habitat_positions[[habitat]] <- species_positions
-  }
-  
-  return(habitat_positions)
- }
-}
-  # ---- SAR analysis function ----
+  #---------------------------- SAR Analysis Function --------------------------
   analyze_sar <- function(results_table,
                           method_used)
   {
@@ -524,14 +519,14 @@ extract_species_positions <- function(species_habitat_matrix,
 
     # Fit linear model with error handling
     tryCatch( # continue calculation despite error
-    {
-      sar_results$lm_model <- lm(log_sp ~ log_area)
-      sar_results$lm_summary <- summary(sar_results$lm_model)
-      sar_results$message <- "SAR analysis completed successfully"
-    }, error = function(e)
       {
-      sar_results$message <- paste("Error fitting linear model:", e$message)
-      sar_results$valid <- FALSE
+        sar_results$lm_model <- lm(log_sp ~ log_area)
+        sar_results$lm_summary <- summary(sar_results$lm_model)
+        sar_results$message <- "SAR analysis completed successfully"
+      }, error = function(e)
+      {
+        sar_results$message <- paste("Error fitting linear model:", e$message)
+        sar_results$valid <- FALSE
       }
     )
 
@@ -539,6 +534,46 @@ extract_species_positions <- function(species_habitat_matrix,
     sar_results$sar_data <- valid_table
 
     return(sar_results)
+  }
+
+  #-------------------------- cSAR Analysis Function ---------------------------
+  analyze_countryside_sar <- function(csar_data,
+                                      habitat_names,
+                                      species_group_names) {
+
+
+    csar_results <- list()
+    csar_results$valid <- FALSE
+    csar_results$message <- ""
+
+    if (nrow(csar_data) < 2) {
+      csar_results$message <- "Insufficient data for countryside SAR (need at least 2 samples)"
+      return(csar_results)
+    }
+
+    tryCatch({
+      if (!requireNamespace("sars", quietly = TRUE)) {
+        csar_results$message <- "Package 'sars' is required"
+        return(csar_results)
+      }
+
+      csar_results$model <- sars::sar_countryside(
+        data = csar_data,
+        modType = "power",
+        gridStart = "partial",
+        habNam = habitat_names,
+        spNam = species_group_names
+      )
+
+      csar_results$valid <- TRUE
+      csar_results$message <- "Countryside SAR completed successfully"
+
+    }, error = function(e) {
+      csar_results$message <- paste("Error:", e$message)
+      csar_results$valid <- FALSE
+    })
+
+    return(csar_results)
   }
 
   #---------------------------- 4. Main processing -----------------------------
@@ -553,15 +588,16 @@ extract_species_positions <- function(species_habitat_matrix,
     {
       convex_hull <- custom_hull
     } else
-      {
+    {
       convex_hull <- sf::st_convex_hull(sf::st_union(points_sf))
-      }
+    }
 
     # Run multiple iterations for circles method
     runs <- list()
 
     for (run in 1:n_runs)
     {
+      # sample data
       samples <- filter_points_in_expanding_circles(points_sf,
                                                     radius,
                                                     convex_hull,
@@ -569,6 +605,7 @@ extract_species_positions <- function(species_habitat_matrix,
       polygons <- lapply(samples, `[[`, "circle")
       samples_points <- lapply(samples, `[[`, "points")
 
+      # Aggregate sampled data
       results_table <- summarize_samples(
         samples = samples_points,
         polygons = polygons,
@@ -593,13 +630,6 @@ extract_species_positions <- function(species_habitat_matrix,
       )
     }
 
-    # Top-level sar_analysis from first run for easy access
-    if (length(runs) > 0) {
-      sar_analysis <- runs[[1]]$sar_analysis
-    } else {
-      sar_analysis <- list(valid = FALSE, message = "No runs completed")
-    }
-
     # results
     res <- list(
       method = method,
@@ -620,10 +650,21 @@ extract_species_positions <- function(species_habitat_matrix,
                                          squares_sf,
                                          cluster_sizes)
 
-    species_sites <- points_sf[,-1]
-    species_groups <- extract_species_positions (species_habitat_matrix = classif, 
-                                      species_site_matrix = species_sites)
-      
+    # Subset classification based on groups parameter for extract_species_positions
+    if (!is.null(groups)) {
+      classif_subset <- classification[, c(species_name_col, group_cols)]
+    } else {
+      # Use all groups
+      classif_subset <- classification
+    }
+
+    # Extract species positions
+    species_sites <- points_sf[, -1]
+    species_groups <- extract_species_positions(species_habitat_matrix = classif_subset,
+                                                species_site_matrix = species_sites)
+
+    species_group_names <- names(species_groups)
+
     samples_points <- lapply(samples, `[[`, "points")
     clusters_chulls <- lapply(samples, `[[`, "chulls")
 
@@ -638,28 +679,34 @@ extract_species_positions <- function(species_habitat_matrix,
       habitat_names = habitat_names,
       habitat_values = habitat_codes,
       species_groups = species_groups,
-      species_group_names = names(species_groups)
+      species_group_names = species_group_names
     )
 
-    # Perform SAR analysis
+    # Standard SAR analysis (uses full table)
     sar_analysis <- analyze_sar(results_table,
                                 method)
 
+    # Countryside SAR analysis (uses clean table without "Others" column)
+    csar_data <- results_table[, c(habitat_names, species_group_names)]
+
+    csar_analysis <- analyze_countryside_sar(csar_data,
+                                             habitat_names,
+                                             species_group_names)
     # result table
     res <- list(
       method = method,
-      n_runs = 1,
-      runs = list(list(
-        run = 1,
-        results_table = results_table,
-        sar_analysis = sar_analysis,
-        samples = samples,
-        squares_sf = squares_sf,
-        clusters_chulls = clusters_chulls
-      )),
-      points_sf = points_sf
+      results_table = results_table,
+      sar_analysis = sar_analysis,
+      csar_analysis = csar_analysis,
+      samples = samples,
+      squares_sf = squares_sf,
+      clusters_chulls = clusters_chulls
     )
+    sar_analysis = sar_analysis
+    csar_analysis = csar_analysis
+    points_sf = points_sf
   }
 
   return(res)
 }
+
