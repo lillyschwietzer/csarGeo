@@ -13,8 +13,8 @@
 #' @param point_size Optional parameter to change the point size of the plot.
 #' @param point_col Optional parameter to change the colour of the points.
 #' @param hull_col Optional parameter to change the hull colour of the plot.
-#' @param area_unit description
-#' @param plot_runs description
+#' @param area_unit 
+#' @param plot_runs Number of runs done using method "Circles". Not available for "Clusters".
 #' @param show_average description
 #' @param average_color description
 #' @param average_lwd description
