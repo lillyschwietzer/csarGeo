@@ -58,7 +58,39 @@ visual_sar <- function(result,
                        show_adj_r_squared = FALSE,
                        show_run_legend = TRUE) {
 
-  #---------------------- 1.) Plot spatial graph/method design---------------------
+  #------------------------ 1) Helper Functions ---------------------------
+  
+  if (method == "circles") {
+    # Circles Map
+    plot_spatial_circles <- function(points_sf, 
+                                     circles, 
+                                     convex_hull) {
+  plot(st_geometry(points_sf), main = "Sampling Circles")
+  plot(convex_hull, border = "red", lwd = 2, add = TRUE)
+  for (circle in circles) {
+    plot(circle, border = "blue", add = TRUE)
+  }
+}
+
+  # Circles SAR
+    
+  } else { # clusters method functions
+    # Clusters Map
+    plot_spatial_clusters
+
+
+    # Clusters SAR
+    plot_clusters_sar
+    
+
+    # Clusters cSAR
+    plot_clusters_csar
+    
+  }
+  
+  
+  
+  #---------------------- 2) Main Processing ---------------------
 
   if (plot_type == "spatial" || plot_type == "both")
   {
