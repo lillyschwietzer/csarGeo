@@ -196,52 +196,6 @@ countryside_sar <- function(
     stop("The following group columns are not in classification: ",
          paste(missing_cols, collapse = ", "))
 
-
-  #----------------------- 2. Species group construction for circles -----------
-  if (method == "circles"){
-  # Species data
-  sp_cols <- 4:ncol(data) # species data starts at column 4
-  sp_names <- colnames(data)[sp_cols]
-  n_sp <- length(sp_cols) # number of species
-  clean_sp <- tolower(trimws(sp_names)) # clean species names for uniform formatting (lowercase, no space at the end or beginning)
-
-  # Classification data
-  classif_sp <- classification[[species_name_col]]
-  clean_classif <- tolower(trimws(classif_sp))
-
-  # Lists for species groups and group names
-  sp_groups <- list()
-  grp_names <- character()
-
-  for (col in group_cols) {
-    vals <- classification[[col]]
-
-    if (is.logical(vals)) {
-      idx <- which(vals)
-    } else if (is.numeric(vals)) {
-      idx <- which(vals == 1)
-    } else {
-      stop("Group column '", col, "' must be logical or numeric (0/1).")
-    }
-
-    sp_clean <- clean_classif[idx]
-    positions <- na.omit(match(sp_clean, clean_sp))
-
-    if (length(positions) > 0) {
-      sp_groups <- c(sp_groups, list(positions))
-      grp_names <- c(grp_names, paste0("Sp_", col))
-    }
-  }
-
-  for (i in seq_along(sp_groups)) {
-    if (any(sp_groups[[i]] < 1 | sp_groups[[i]] > n_sp))
-      stop("Error: group indices out of range.")
-  }
-
-  # Create name alias for helper functions (summarize_samples, countryside SAR)
-  species_group_names <- grp_names
-  }
-
   #---------------------------- 3. Helper functions ----------------------------
 
   if (method == "circles")
@@ -581,8 +535,24 @@ countryside_sar <- function(
                             coords = c("long", "lat"),
                             crs = crs)
 
-  if (method == "circles")
-  {
+  if (method == "circles") {
+
+    # ----- Step 1: Build species groups -----
+    sp_groups <- list()
+    grp_names <- character()
+
+    for (col in group_cols) {
+      species_in_group <- classification[classification[[col]] == 1, ]$species
+      positions <- match(species_in_group, colnames(data)[4:ncol(data)])
+      positions <- positions[!is.na(positions)]
+      if (length(positions) > 0) {
+        sp_groups <- c(sp_groups, list(positions))
+        grp_names <- c(grp_names, paste0("Sp_", col))
+      }
+    }
+    species_group_names <- grp_names
+
+    # ----- Step 2: Define boundary -----
     # Use custom hull if provided, otherwise create from points
     if (!is.null(custom_hull))
     {
@@ -592,20 +562,18 @@ countryside_sar <- function(
       convex_hull <- sf::st_convex_hull(sf::st_union(points_sf))
     }
 
-    # Run multiple iterations for circles method
+    # ----- Step 3: Run iterations -----
     runs <- list()
 
-    for (run in 1:n_runs)
-    {
-      # sample data
+    for (run in 1:n_runs) {
       samples <- filter_points_in_expanding_circles(points_sf,
                                                     radius,
                                                     convex_hull,
                                                     break_threshold)
+
       polygons <- lapply(samples, `[[`, "circle")
       samples_points <- lapply(samples, `[[`, "points")
 
-      # Aggregate sampled data
       results_table <- summarize_samples(
         samples = samples_points,
         polygons = polygons,
@@ -616,11 +584,9 @@ countryside_sar <- function(
         species_group_names = grp_names
       )
 
-      # Perform SAR analysis
-      sar_analysis <- analyze_sar(results_table,
-                                  method)
+      # Standard SAR
+      sar_analysis <- analyze_sar(results_table, method)
 
-      # Store results
       runs[[run]] <- list(
         run = run,
         results_table = results_table,
@@ -630,17 +596,15 @@ countryside_sar <- function(
       )
     }
 
-    # results
+    # ----- Step 4: Return results -----
     res <- list(
       method = method,
       n_runs = n_runs,
       runs = runs,
-      sar_analysis = sar_analysis,
       points_sf = points_sf,
       convex_hull = convex_hull,
       hull_source = ifelse(is.null(custom_hull), "derived", "custom")
     )
-
   } else {
     # Clusters method (deterministic, always single run)
     squares_sf <- create_squares(points_sf,
@@ -709,4 +673,5 @@ countryside_sar <- function(
 
   return(res)
 }
+
 
