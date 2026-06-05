@@ -58,6 +58,18 @@ visual_sar <- function(result,
                        show_adj_r_squared = FALSE,
                        show_run_legend = TRUE) {
 
+  # ------------ Data Access------------
+  if (...) { # plot map
+    access following data from res: xyz
+    then assign parameters
+  }
+
+
+  #--------------------- Cluster Data
+
+  
+  res_clusters_sar <- res_clusters[["sar_analysis"]][["lm_model"]][["model"]]
+  
   #------------------------ 1) Helper Functions ---------------------------
   
   if (method == "circles") {
@@ -72,27 +84,107 @@ visual_sar <- function(result,
   }
 }
 
+    plot(st_geometry(points)) # st_geometry extracts only geometry components from points -> just coordinates
+plot(convex_hull, border = "red", lwd = 2, add=TRUE)
+
+for (i in seq_along(pt_in_circles)) # loop through the number of circles created
+{
+  print(pt_in_circles[[i]]$points) # access points for circle i
+  plot(st_geometry(pt_in_circles[[i]]$circle),  border = "blue", add=TRUE) # access circle geometry for circle
+}
+    
   # Circles SAR
+  plot_sar_circles <- function(Area_Total,
+                               Sp_Total){
+    plot(log(res$Area_Total),log(res$Sp_Total)) # logscale plot of area vs. species richness
+    abline(sar=lm(log(res$Sp_Total)~log(res$Area_Total)))
+}
     
   } else { # clusters method functions
+    
     # Clusters Map
-    plot_spatial_clusters
+    plot_spatial_clusters <- function (clusters_chulls,
+                                      points){
+       for (size in seq_along(clusters_chulls)) # loops through each level of hulls
+{
+  # Set up colors
+  colors <- rainbow(length(clusters_chulls[[size]]))
+  plot(st_geometry(points)) # new plot for each level of clustering, Add remaining polygons with different colors to existing plot
+  for (i in 1:length(clusters_chulls[[size]])) {
+    plot(clusters_chulls[[size]][[i]], col = colors[i], border = "black", add = TRUE)
+  }
+}
+      
+    }
 
 
     # Clusters SAR
-    plot_clusters_sar
+    plot_clusters_sar <- function(Area_Total,
+                                  Sp_Total){
+    plot(res_clusters_sar$log_area,res_clusters_sar$log_sp) # logscale plot of area vs. species richness
+    abline(sar=lm(res_clusters_sar$log_sp~(res_clusters_sar$log_area))
+}
+
+    
     
 
     # Clusters cSAR
     plot_clusters_csar
-    
+
+    # Affinity box
+    affinity_box_clusters <- function (){
+      barplot (
+    }
   }
   
   
-  
   #---------------------- 2) Main Processing ---------------------
+if (method == "circles"){
 
-  if (plot_type == "spatial" || plot_type == "both")
+  
+} else {
+
+# map plot
+
+
+  # sar plot
+
+
+
+
+  # csar plot
+
+
+
+
+
+
+  # barplot affinities
+
+
+
+
+  
+}
+ 
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        if (plot_type == "spatial" || plot_type == "both")
   {
 
     if (result$method == "circles")
