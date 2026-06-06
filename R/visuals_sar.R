@@ -34,6 +34,9 @@
 #' plot_countryside_sar(res, plot_type = "both")
 #' }
 visual_sar <- function(result,
+                       method = NULL,
+
+                       
                        plot_type = "both",
                        habitat_raster = NULL,
                        cluster_level = "size_256",
@@ -58,7 +61,7 @@ visual_sar <- function(result,
                        show_adj_r_squared = FALSE,
                        show_run_legend = TRUE) {
 
-  # ------------ Data Access------------
+  # ------------ Data Access------------  # or better in main?
   if (...) { # plot map
     access following data from res: xyz
     then assign parameters
@@ -113,9 +116,8 @@ for (i in seq_along(pt_in_circles)) # loop through the number of circles created
   for (i in 1:length(clusters_chulls[[size]])) {
     plot(clusters_chulls[[size]][[i]], col = colors[i], border = "black", add = TRUE)
   }
+ }
 }
-      
-    }
 
 
     # Clusters SAR
@@ -125,19 +127,34 @@ for (i in seq_along(pt_in_circles)) # loop through the number of circles created
     abline(sar=lm(res_clusters_sar$log_sp~(res_clusters_sar$log_area))
 }
 
-    
-    
 
     # Clusters cSAR
     plot_clusters_csar
 
-    # Affinity box
-    affinity_box_clusters <- function (){
-      barplot (
-    }
+    #----------- Affinity Heatmap # library(ggplot2) library(reshape2)
+    plot_heat_clusters <- function(affinity_data) {
+
+  # Convert list to matrix if needed
+  affinity_mat <- as.matrix(affinity_data)
+  
+  # Convert to long format for ggplot
+  affinity_long <- melt(affinity_mat, varnames = c("Species Group", "Habitat"))
+  
+  # Create heatmap with legend on left
+  ggplot(affinity_long, aes(x = Habitat, y = Species_Group, fill = value)) +
+    geom_tile() +
+    scale_fill_gradientn(colors = rev(heat.colors(10)), 
+                         name = "Affinity",
+                         limits = c(0, 1)) +
+    labs(title = "Species Habitat Affinity") +
+    theme_minimal() +
+    theme(legend.position = "right",  
+          axis.text.x = element_text(angle = 45, hjust = 1),
+          plot.title = element_text(hjust = 0.5)) +
+    coord_fixed(ratio = 0.5)  # Adjust tile shape
+}
   }
-  
-  
+           
   #---------------------- 2) Main Processing ---------------------
 if (method == "circles"){
 
@@ -159,11 +176,12 @@ if (method == "circles"){
 
 
 
-  # barplot affinities
+  # Heatmap affinities
+  # extract affinity data and create matrix
+  affinity_matrix <- csar_res$model$affinity
+  affinity_df <- do.call(rbind, affinity_matrix)
 
-
-
-
+  plot_heat_clusters <- function(affinity_df)
   
 }
  
