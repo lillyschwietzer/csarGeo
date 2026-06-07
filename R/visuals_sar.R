@@ -98,9 +98,9 @@ plot_sar_circles <- function(sar_results) {
          bty = "n")
 }
     
-  } else { # clusters method functions
+  } else { #----------- clusters method functions -----------------
     
-    # Clusters Map
+    #---------------- Clusters Map -----------------
     plot_spatial_clusters <- function (clusters_chulls,
                                       points){
        for (size in seq_along(clusters_chulls)) # loops through each level of hulls
@@ -115,7 +115,19 @@ plot_sar_circles <- function(sar_results) {
 }
 
 
-    # Clusters SAR
+    for (size in seq_along(clusters_chulls)) # loops through each level of hulls
+{
+  # Set up colors
+  colors <- rainbow(length(clusters_chulls[[size]]))
+  plot(st_geometry(points)) # new plot for each level of clustering
+  # Add remaining polygons with different colors to existing plot
+  for (i in 1:length(clusters_chulls[[size]])) {
+    plot(clusters_chulls[[size]][[i]], col = colors[i], border = "black", add = TRUE)
+  }
+}
+
+
+    #---------------- Clusters SAR ---------------
     plot_clusters_sar <- function(Area_Total,
                                   Sp_Total){
     plot(res_clusters_sar$log_area,res_clusters_sar$log_sp) # logscale plot of area vs. species richness
@@ -123,7 +135,7 @@ plot_sar_circles <- function(sar_results) {
 }
 
 
-    # Clusters cSAR
+    #------------------ Clusters cSAR --------------
     plot_clusters_csar
 
     #----------- Affinity Heatmap # library(ggplot2) library(reshape2)
@@ -155,7 +167,7 @@ if (method == "circles"){
   
   n_runs <- res_circles[["n_runs"]]  # number of runs
   
-  if (n_runs > 1) { # if circles ran more than once 
+  if (n_runs > 1) { # multiple runs
     
     # Calculate grid dimensions
     n_cols <- ceiling(sqrt(n_runs))
