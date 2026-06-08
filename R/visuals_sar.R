@@ -21,10 +21,6 @@ visual_sar <- function(result) {
 #----------------- Input infos ------------------
  method <- result[["method"]]
 
-  # how many total runs for method "circles"
-total_runs <- res_circles[["n_runs"]]
-  
- 
   #--------------------- Data Manipulation: Circles -------------------------
 
 prepare_circles_for_plot <- function(res_circles, 
@@ -187,9 +183,9 @@ if (method == "circles"){
     for (run in 1:n_runs) {
       # Extract circle data 
       circles_for_plot <- res_circles[["runs"]][[run]][["samples"]]
-      circle_geometries <- lapply(circles_for_plot, function(x) x$circle)
+      circle_geometries <- lapply(circles_for_plot, \(x) x$circle)
       
-      # Plot with run-specific title
+      # Plot one map per run
       plot_spatial_circles(
         points_sf = res_circles[["points_sf"]],
         circles_list = circle_geometries,
@@ -203,7 +199,7 @@ if (method == "circles"){
     
   } else { # Single run 
     circles_for_plot <- res_circles[["runs"]][[1]][["samples"]]
-    circle_geometries <- lapply(circles_for_plot, function(x) x$circle)
+    circle_geometries <- lapply(circles_for_plot, \(x) x$circle)
     
     plot_spatial_circles(
       points_sf = res_circles[["points_sf"]],
@@ -213,8 +209,19 @@ if (method == "circles"){
     )
   }
 
+  #------------------------- sar -----------------------------
+
+ n_runs <- res_circles[["n_runs"]]  # number of runs
+  
+  if (n_runs > 1) {
+
+  
+  plot_sar_circles(
+} else { # only 1 run
+
+  }
                                 
-} else {
+} else { #--------------------- clusters ----------------------------
 
 # map plot
 points_combined <- do.call(rbind, res_clusters[["samples"]][["size_1"]][["points"]])
@@ -249,7 +256,7 @@ for (level in 1:n_levels) {
     )
   }
 
-  # sar plot
+  #--------------------------- sar plot -----------------------------
  # Extract SAR results from clusters object
   sar_results <- res_clusters[["sar_analysis"]]
   
@@ -257,7 +264,7 @@ for (level in 1:n_levels) {
   plot_sar_clusters(sar_results)
 }
 
-  # Heatmap affinities
+  #----------------------- Heatmap affinities -----------------------
   # extract affinity data and create matrix
   affinity_matrix <- csar_res$model$affinity
   affinity_df <- do.call(rbind, affinity_matrix)
