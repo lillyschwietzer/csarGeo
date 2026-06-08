@@ -6,15 +6,8 @@
 #'
 #' @param result Output object from countryside_sar function.
 #' @param plot_type Type of plot: "spatial" for sampling design, "sar" for species-area relationship, or "both" in a grid.
-#' @param habitat_raster Optional parameter to add a land-use raster background.
-#' @param cluster_level For clusters method, defines which level to plot (e.g., "size_256")
-#' @param plot_all_levels For "clusters" method, plot all levels at once in an arranged grid. If plot_all_levels = TRUE it is not possible to define a value for cluster_level.
-#' @param ncol description
-#' @param point_size Optional parameter to change the point size of the plot.
-#' @param point_col Optional parameter to change the colour of the points.
-#' @param hull_col Optional parameter to change the hull colour of the plot.
 #'
-#' @return No return value, function creates plots.
+#' @return A plot or a grid of plots of the given parameters.
 #' @export
 #'
 #' @examples
@@ -23,25 +16,25 @@
 #' }
 visual_sar <- function(result) {
 
+  main_title
 
-  method <- result(method)
+#----------------- Input infos ------------------
+ method <- result[["method"]]
+
+  # how many total runs for method "circles"
+total_runs <- res_circles[["n_runs"]]
+  
+ 
   #--------------------- Data Manipulation: Circles -------------------------
 
 prepare_circles_for_plot <- function(res_circles, 
-                                     run_number = 1,
-                                     circle_color = "blue",
-                                     highlight_radii = NULL) {
+                                     run_number = 1) {
   
-  # Extract samples for specified run
+  # Extract samples + geometries for specified run
   samples <- res_circles[["runs"]][[run_number]][["samples"]]
+  circle_polygons <- lapply(samples, \(x) x$circle)
   
-  # Extract circle geometries
-  circle_polygons <- lapply(samples, function(x) x$circle)
-  
-  # Optional: Name them by radius for reference
-  names(circle_polygons) <- names(samples)
-  
-  # Return a clean list with everything the plot function needs
+  # Return list for plot function
   return(list(
     points = res_circles[["points_sf"]],
     circles = circle_polygons,
@@ -101,43 +94,57 @@ plot_sar_circles <- function(sar_results) {
   } else { #----------- clusters method functions -----------------
     
     #---------------- Clusters Map -----------------
-    plot_spatial_clusters <- function (clusters_chulls,
-                                      points){
-       for (size in seq_along(clusters_chulls)) # loops through each level of hulls
-{
-  # Set up colors
-  colors <- rainbow(length(clusters_chulls[[size]]))
-  plot(st_geometry(points)) # new plot for each level of clustering, Add remaining polygons with different colors to existing plot
-  for (i in 1:length(clusters_chulls[[size]])) {
-    plot(clusters_chulls[[size]][[i]], col = colors[i], border = "black", add = TRUE)
-  }
- }
-}
-
-
-    for (size in seq_along(clusters_chulls)) # loops through each level of hulls
-{
-  # Set up colors
-  colors <- rainbow(length(clusters_chulls[[size]]))
-  plot(st_geometry(points)) # new plot for each level of clustering
-  # Add remaining polygons with different colors to existing plot
-  for (i in 1:length(clusters_chulls[[size]])) {
-    plot(clusters_chulls[[size]][[i]], col = colors[i], border = "black", add = TRUE)
+ plot_spatial_clusters <- function(clusters_chulls, points, main_title = NULL) {
+  
+  for (level in seq_along(clusters_chulls)) {
+    # Use provided title or default
+    if (is.null(main_title)) {
+      main_title <- paste("Clustering Level", level)
+    }
+    
+    plot(sf::st_geometry(points), 
+         main = main_title,
+         cex = 0.5, pch = 16)
+    
+    hulls <- clusters_chulls[[level]]
+    if (length(hulls) > 0) {
+      colors <- rainbow(length(hulls))
+      for (i in seq_along(hulls)) {
+        plot(hulls[[i]], 
+             border = "black", 
+             col = adjustcolor(colors[i], alpha.f = 0.5),
+             add = TRUE)
+      }
+    }
   }
 }
 
 
     #---------------- Clusters SAR ---------------
-    plot_clusters_sar <- function(Area_Total,
-                                  Sp_Total){
-    plot(res_clusters_sar$log_area,res_clusters_sar$log_sp) # logscale plot of area vs. species richness
-    abline(sar=lm(res_clusters_sar$log_sp~(res_clusters_sar$log_area))
-}
-
-
-    #------------------ Clusters cSAR --------------
-    plot_clusters_csar
-
+      plot_sar_clusters <- function(sar_results) {
+      # Contains: log_area, log_sp, lm_model, etc.
+      
+      # Extract log-transformed data
+      log_area <- sar_results[["log_area"]]
+      log_sp <- sar_results[["log_sp"]]
+      
+      # Create plot
+      plot(log_area, log_sp, 
+           xlab = "log(Area)", 
+           ylab = "log(Species Richness)",
+           main = "Species-Area Relationship (SAR) - Clusters",
+           pch = 16)
+      
+      # Add regression line
+      abline(sar_results[["lm_model"]], col = "red", lwd = 2)
+      
+      # Add R-squared value
+      r2 <- sar_results[["lm_summary"]][["r.squared"]]
+      legend("bottomright", 
+             legend = c(paste("R² =", round(r2, 3))),
+             bty = "n")
+    }
+           
     #----------- Affinity Heatmap # library(ggplot2) library(reshape2)
     plot_heat_clusters <- function(affinity_data) {
 
@@ -210,13 +217,45 @@ if (method == "circles"){
 } else {
 
 # map plot
+points_combined <- do.call(rbind, res_clusters[["samples"]][["size_1"]][["points"]])
 
+  # determine level count for plotting parameters
+  n_levels <- length(res_clusters[["samples"]]) 
+  
+  if (n_levels > 1) { # Plot all levels
+    n_cols <- ceiling(sqrt(n_levels))
+    n_rows <- ceiling(n_levels / n_cols)
+
+    # set plotting grid
+    par(mfrow = c(n_rows, n_cols), mar = c(2, 2, 3, 2))
+
+    level_names <- names(res_clusters[["clusters_chulls"]])
+
+for (level in 1:n_levels) {
+  plot_spatial_clusters(
+    clusters_chulls = res_clusters[["clusters_chulls"]][level],
+    points = points_combined
+  )
+  title(level_names[level]) 
+}
+
+    # reset plotting parameters
+    par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
+    
+  } else { # Plot only 1 level
+    plot_spatial_clusters(
+      clusters_chulls = res_clusters[["clusters_chulls"]],
+      points = points_combined
+    )
+  }
 
   # sar plot
-
-
-  # csar plot
-
+ # Extract SAR results from clusters object
+  sar_results <- res_clusters[["sar_analysis"]]
+  
+  # Plot SAR
+  plot_sar_clusters(sar_results)
+}
 
   # Heatmap affinities
   # extract affinity data and create matrix
