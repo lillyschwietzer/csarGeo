@@ -26,17 +26,16 @@
 #' @examples
 #' \dontrun{
 #' res <- countryside_sar(
-#'   data = mydata,
-#'   crs = 3763,
-#'   method = "circles",
-#'   radius = 2000 * 1:10,
-#'   habitat = myraster,
-#'   habitat_names = c("Forest", "Agriculture", "Shrubland"),
-#'   habitat_codes = 1:3,
-#'   classification = myclassif,
-#'   groups = "Forest",
-#'   seed = 123
-#' )
+#' data = data,
+#' crs = 3763,
+#' method = "circles",
+#' radius = 2000 * 1:15,
+#' habitat = myraster,
+#' habitat_names = c("Forest", "Agriculture", "Shrubland"),
+#' classification = myclasses,
+#' groups = c("Forest", "Grassland", "generalists"),
+#' n_runs = 1
+#')
 #' }
 countryside_sar <- function(
     data,
@@ -59,33 +58,31 @@ countryside_sar <- function(
     # Coordinate transformation options
     transform_to_utm = FALSE,
     target_crs = NULL,
-    warn_projection = TRUE,
     n_runs = 1
 )  {
 
+#----------------- Initial Transformation and Projection -------------
   # create vector for habitat codes of the raster
   habitat_codes <- seq_along(habitat_names)
 
-  #-------------------------------------
-
-  # Optional: Set seed for reproducibility
+  # Optional seed for reproducibility of "circles"
   if (!is.null(seed)) set.seed(seed)
 
-  # If needed: Coordinate transformation (user must provide target_crs)
-  if (transform_to_utm) {
+  # Optional coordinate transformation with target_crs
+  if (transform_to_utm == TRUE) {
 
     # Check if coordinates are already projected
     if (any(abs(data$long) > 180) || any(abs(data$lat) > 90)) {
-      stop("Coordinates appear to already be in a projected CRS. ",
+      stop("Coordinates seem to be in a projected CRS already. ",
            "Set transform_to_utm = FALSE or check your data.")
     }
 
     # Validate target_crs is provided
     if (is.null(target_crs)) {
-      stop("When transform_to_utm = TRUE, you must provide 'target_crs' (e.g., 3763 for Portugal TM06)")
+      stop("When transform_to_utm = TRUE, you must provide a 'target_crs' (e.g., 3763 for Portugal TM06)")
     }
 
-    # Validate target_crs is numeric
+    # Validate target_crs
     if (!is.numeric(target_crs)) {
       stop("target_crs must be a numeric EPSG code (e.g., 3763 for Portugal TM06)")
     }
@@ -114,7 +111,7 @@ countryside_sar <- function(
   #---------------------------- 1. Input validation ----------------------------
   method <- match.arg(method)
 
-  # dataframe
+  # Validate input data structure
   if (!"long" %in% names(data) || !"lat" %in% names(data))
     stop("Data must contain 'long' and 'lat' columns.")
 
@@ -176,8 +173,8 @@ countryside_sar <- function(
   }
 
   # Habitat specific validation
-  if (is.null(habitat) || is.null(habitat_names) || is.null(habitat_codes))
-    stop("'habitat', 'habitat_names', and 'habitat_codes' are required.")
+  if (is.null(habitat) || is.null(habitat_names))
+    stop("'habitat' and 'habitat_names' are required.")
 
   if (length(habitat_names) != length(habitat_codes))
     stop("Length of 'habitat_names' must equal length of 'habitat_codes'.")
@@ -190,11 +187,6 @@ countryside_sar <- function(
 
   species_name_col <- names(classification)[1]
   group_cols <- if (is.null(groups)) names(classification)[-1] else groups
-
-  missing_cols <- setdiff(group_cols, names(classification))
-  if (length(missing_cols) > 0)
-    stop("The following group columns are not in classification: ",
-         paste(missing_cols, collapse = ", "))
 
   #---------------------------- 3. Helper functions ----------------------------
 
@@ -537,7 +529,7 @@ countryside_sar <- function(
 
   if (method == "circles") {
 
-    # ----- Step 1: Build species groups -----
+    #--------- Step 1: Build species groups ------
     sp_groups <- list()
     grp_names <- character()
 
@@ -552,17 +544,17 @@ countryside_sar <- function(
     }
     species_group_names <- grp_names
 
-    # ----- Step 2: Define boundary -----
+    #----------- Step 2: Define boundary ---------
     # Use custom hull if provided, otherwise create from points
     if (!is.null(custom_hull))
     {
       convex_hull <- custom_hull
-    } else
+    } else # auto-generate hull
     {
       convex_hull <- sf::st_convex_hull(sf::st_union(points_sf))
     }
 
-    # ----- Step 3: Run iterations -----
+    #----------- Step 3: Run iterations -----------
     runs <- list()
 
     for (run in 1:n_runs) {
@@ -587,6 +579,7 @@ countryside_sar <- function(
       # Standard SAR
       sar_analysis <- analyze_sar(results_table, method)
 
+     # save results of this run
       runs[[run]] <- list(
         run = run,
         results_table = results_table,
@@ -596,7 +589,7 @@ countryside_sar <- function(
       )
     }
 
-    # ----- Step 4: Return results -----
+    #---------- Step 4: Return results ---------
     res <- list(
       method = method,
       n_runs = n_runs,
@@ -605,8 +598,9 @@ countryside_sar <- function(
       convex_hull = convex_hull,
       hull_source = ifelse(is.null(custom_hull), "derived", "custom")
     )
-  } else {
-    # Clusters method (deterministic, always single run)
+  } else { # Clusters method (deterministic, always single run)
+   
+   #---------------- Step 1: Sample data in clusters ----------
     squares_sf <- create_squares(points_sf,
                                  square_size)
 
@@ -614,6 +608,8 @@ countryside_sar <- function(
                                          squares_sf,
                                          cluster_sizes)
 
+   #------------------ Step 2: Define species groups -------------------
+      
     # Subset classification based on groups parameter for extract_species_positions
     if (!is.null(groups)) {
       classif_subset <- classification[, c(species_name_col, group_cols)]
@@ -629,6 +625,7 @@ countryside_sar <- function(
 
     species_group_names <- names(species_groups)
 
+    #-------------- Step 3: Aggregate species data -------------
     samples_points <- lapply(samples, `[[`, "points")
     clusters_chulls <- lapply(samples, `[[`, "chulls")
 
@@ -636,6 +633,7 @@ countryside_sar <- function(
     samples_flat <- unlist(samples_points, recursive = FALSE)
     polygons_flat <- unlist(clusters_chulls, recursive = FALSE)
 
+    # Aggregate sampled data
     results_table <- summarize_samples(
       samples = samples_flat,
       polygons = polygons_flat,
@@ -646,6 +644,7 @@ countryside_sar <- function(
       species_group_names = species_group_names
     )
 
+    #----------------- Step 4: SAR and cSAR analysis -------------
     # Standard SAR analysis (uses full table)
     sar_analysis <- analyze_sar(results_table,
                                 method)
@@ -656,6 +655,9 @@ countryside_sar <- function(
     csar_analysis <- analyze_countryside_sar(csar_data,
                                              habitat_names,
                                              species_group_names)
+      
+    #-------------- Step 5: Return results ----------------
+      
     # result table
     res <- list(
       method = method,
