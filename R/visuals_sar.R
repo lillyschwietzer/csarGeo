@@ -14,16 +14,26 @@
 #' \dontrun{
 #' plot_countryside_sar(res, plot_type = "both")
 #' }
-visual_sar <- function(result) {
+visual_sar <- function(result,
+                      plot_type = NULL,
+                      # Circles
+                      plot_all_runs = TRUE
+                      plot_run_n = NULL,
+                      # Clusters
+                      plot_all_levels = TRUE,
+                      plot_level = NULL) 
+{
 
   main_title
 
 #----------------- Input infos ------------------
  method <- result[["method"]]
 
-  #--------------------- Data Manipulation: Circles -------------------------
+#------------------------ 1) Helper Functions ---------------------------
 
-prepare_circles_for_plot <- function(res_circles, 
+  if (method == circles) {
+  
+prepare_circles_for_plot <- function(res_circles,  # data prep
                                      run_number = 1) {
   
   # Extract samples + geometries for specified run
@@ -38,9 +48,6 @@ prepare_circles_for_plot <- function(res_circles,
   ))
 }
   
-  #------------------------ 1) Helper Functions ---------------------------
-  
-  if (method == "circles") {
     #-------------- Circles Map ---------------
 
     plot_spatial_circles <- function(points_sf, 
@@ -115,7 +122,6 @@ plot_sar_circles <- function(sar_results) {
   }
 }
 
-
     #---------------- Clusters SAR ---------------
       plot_sar_clusters <- function(sar_results) {
       # Contains: log_area, log_sp, lm_model, etc.
@@ -166,11 +172,13 @@ plot_sar_circles <- function(sar_results) {
   }
            
   #---------------------- 2) Main Processing ---------------------
+
+  #----------------------------- Circles -------------------------------
 if (method == "circles"){
   
   n_runs <- res_circles[["n_runs"]]  # number of runs
   
-  if (n_runs > 1) { # multiple runs
+  if (plot_all_runs == TRUE) { # Plot all runs that were made
     
     # Calculate grid dimensions
     n_cols <- ceiling(sqrt(n_runs))
@@ -197,7 +205,8 @@ if (method == "circles"){
     # Reset plotting parameters
     par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
     
-  } else { # Single run 
+  } if (plot_run_n == run_number) {
+  
     circles_for_plot <- res_circles[["runs"]][[1]][["samples"]]
     circle_geometries <- lapply(circles_for_plot, \(x) x$circle)
     
