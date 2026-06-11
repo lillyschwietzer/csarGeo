@@ -15,7 +15,7 @@
 #' plot_countryside_sar(res, plot_type = "both")
 #' }
 visual_sar <- function(result,
-                      plot_type = NULL,
+                      plot_type = NULL, # ("map","sar","csar")
                       # Circles
                       plot_all_runs = TRUE
                       plot_run_n = NULL,
