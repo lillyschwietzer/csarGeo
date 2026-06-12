@@ -20,8 +20,7 @@ visual_sar <- function(result,
                       plot_all_runs = TRUE
                       plot_run_n = NULL,
                       # Clusters
-                      plot_all_levels = TRUE,
-                      plot_level = NULL) 
+                      plot_all_levels = TRUE) 
 {
 
   main_title
@@ -219,9 +218,7 @@ if (method == "circles"){
   }
 
   #------------------------- sar -----------------------------
-
- n_runs <- res_circles[["n_runs"]]  # number of runs
-  
+ if (plot_type == "sar"){
   if (n_runs > 1) {
 
   
@@ -230,15 +227,16 @@ if (method == "circles"){
 
   }
                                 
-} else { #--------------------- clusters ----------------------------
+}  else { #--------------------- clusters ----------------------------
 
+  if (plot_type == "map"){
 # map plot
 points_combined <- do.call(rbind, res_clusters[["samples"]][["size_1"]][["points"]])
 
   # determine level count for plotting parameters
   n_levels <- length(res_clusters[["samples"]]) 
   
-  if (n_levels > 1) { # Plot all levels
+  if (plot_all_levels == TRUE) { # Plot all levels
     n_cols <- ceiling(sqrt(n_levels))
     n_rows <- ceiling(n_levels / n_cols)
 
@@ -258,22 +256,19 @@ for (level in 1:n_levels) {
     # reset plotting parameters
     par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
     
-  } else { # Plot only 1 level
-    plot_spatial_clusters(
-      clusters_chulls = res_clusters[["clusters_chulls"]],
-      points = points_combined
-    )
-  }
-
+  } 
+}
   #--------------------------- sar plot -----------------------------
- # Extract SAR results from clusters object
+ if (plot_type == "sar") {
+  # Extract SAR results from clusters object
   sar_results <- res_clusters[["sar_analysis"]]
   
   # Plot SAR
   plot_sar_clusters(sar_results)
-}
+ }
 
   #----------------------- Heatmap affinities -----------------------
+ if (plot_type == "csar"){
   # extract affinity data and create matrix
   affinity_matrix <- csar_res$model$affinity
   affinity_df <- do.call(rbind, affinity_matrix)
