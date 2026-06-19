@@ -1,4 +1,9 @@
 #' Countryside-SAR
+#' @description
+#' A function to perform a complete SAR analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach, which assigns standardized squares to each sampling point and groups them in increasing size and decreasing count for each level.
+#'
+#' See Details for more information.
+#'
 #'
 #' @param data The provided dataset. It needs to be structured as following: the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.
 #' @param crs The coordinate reference system (CRS) of the sampling location.
@@ -8,9 +13,8 @@
 #' @param custom_hull Import a polygon hull for method "circles". If method = "clusters" the function will ignore the imported hull and auto-generate a hull instead. If custom_hull = NULL, the function auto-generates a hull for method "circles".
 #' @param square_size The size of the square buffer for each sampling point for method "Clusters".
 #' @param cluster_sizes Numerical vector that defines the amount of levels for the hierarchical "Clusters" approach as well as the amount of clusters within each level, e.g. c(1, 4, 16, 64, 256) -> 5 levels, first level 256 clusters, second level 64 clusters, etc.
-#' @param habitat Land-use raster of the sampling location.
+#' @param habitat Land-use raster of the sampling location, a .tif file.
 #' @param habitat_names Character vector with the names of the land-use types of the land-use raster defined in 'habitat'.
-#' @param habitat_codes Numerical vector of raster values corresponding to each habitat name.
 #' @param classification Species classification file. A table with a first column for species names and the following columns as binary (0/1) group indicators.
 #' @param groups Which group columns to use from classification (NULL = use all columns except first).
 #' @param seed Optional seed for reproducibility of random processes (circles starting point and k-means clustering).
@@ -19,7 +23,7 @@
 #' @param warn_projection Defaults to TRUE, will warn the user about possible projection issues.
 #' @param n_runs Option to run the function multiple times, default value = 1.
 #'
-#' @return A list containing results_table, spatial objects, and sampling information.
+#' @return A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
 #' @export
 #'
 #' @examples
@@ -62,6 +66,9 @@ countryside_sar2 <- function(
     warn_projection = TRUE,
     n_runs = 1
 ) {
+
+  # create vector for habitat codes of the raster
+  habitat_codes <- seq_along(habitat_names)
 
   # Optional: Set seed for reproducibility
   if (!is.null(seed)) set.seed(seed)
@@ -222,8 +229,8 @@ countryside_sar2 <- function(
   }
 
   # Habitat specific validation
-  if (is.null(habitat) || is.null(habitat_names) || is.null(habitat_codes))
-    stop("'habitat', 'habitat_names', and 'habitat_codes' are required.")
+  if (is.null(habitat) || is.null(habitat_names))
+    stop("'habitat' and 'habitat_names' are required.")
 
   if (length(habitat_names) != length(habitat_codes))
     stop("Length of 'habitat_names' must equal length of 'habitat_codes'.")
@@ -282,6 +289,9 @@ countryside_sar2 <- function(
       stop("Error: group indices out of range.")
   }
 
+  # Create name alias for helper functions (summarize_samples, countryside SAR)
+  species_group_names <- grp_names
+
   #---------------------------- 3. Helper functions ----------------------------
 
   filter_points_in_expanding_circles <- function(points_sf,
@@ -317,26 +327,35 @@ countryside_sar2 <- function(
                                 habitat_names,
                                 habitat_values,
                                 species_groups,
-                                species_group_names)
-  {
+                                species_group_names) {
+
     # Calculate the "Other" code as max habitat value + 1 for reclass
     other_code <- max(habitat_values) + 1
 
     # Add "Other" to habitat_names and habitat_values (if not already present)
     if (!"Other" %in% habitat_names) {
-      habitat_names <- c(habitat_names, "Other")
-      habitat_values <- c(habitat_values, other_code)
+      habitat_names_full <- c(habitat_names, "Other")
+      habitat_values_full <- c(habitat_values, other_code)
+    } else {
+      habitat_names_full <- habitat_names
+      habitat_values_full <- habitat_values
     }
 
-    # Initialize an empty data frame for the results (added Polygon_Area for comparison with calculated Area_Total)
-    results_df <- data.frame(matrix(ncol = length(habitat_names)+
-                                      length(species_group_names)+3,
-                                    nrow = 0))
-    colnames(results_df) <- c(habitat_names, "Area_Total", species_group_names, "Sp_Total", "Polygon_Area")
+    # Initialize the FULL results data frame (for standard SAR)
+    results_df_full <- data.frame(matrix(ncol = length(habitat_names_full) +
+                                           length(species_group_names) + 3,
+                                         nrow = 0))
+    colnames(results_df_full) <- c(habitat_names_full, "Area_Total",
+                                   species_group_names, "Sp_Total", "Polygon_Area") # here, area with species groups
 
-    # Iterate over each area sample (e.g. group of sites)
-    for (i in seq_along(samples))
-    {
+    # Initialize the CLEAN results data frame (for countryside SAR)
+    results_df_clean <- data.frame(matrix(ncol = length(habitat_names) +
+                                            length(species_group_names),
+                                          nrow = 0))
+    colnames(results_df_clean) <- c(habitat_names, species_group_names)
+
+    # Iterate over each area sample
+    for (i in seq_along(samples)) {
       sample <- samples[[i]]
       polygon <- polygons[[i]]
 
@@ -356,7 +375,7 @@ countryside_sar2 <- function(
       habitat_df <- terra::freq(habitat_masked, bylayer = FALSE)
 
       # Ensure all possible values are included (now includes other_code)
-      all_values_df <- data.frame(value = habitat_values, count = 0)
+      all_values_df <- data.frame(value = habitat_values_full, count = 0)
 
       # Merge with actual frequency data, replacing 0 where missing
       habitat_df <- merge(all_values_df, habitat_df, by = "value", all.x = TRUE)
@@ -369,29 +388,47 @@ countryside_sar2 <- function(
 
       habitat_df$area <- habitat_df$count * terra::res(habitat_raster)[1] * terra::res(habitat_raster)[2]
 
-      # Store the results
-      results_df[i, seq_along(habitat_names)] <- habitat_df$area
-      results_df[i, length(habitat_names)+1] <- sum(results_df[i, seq_along(habitat_names)])
+      # Store habitat areas in FULL results (including "Other")
+      results_df_full[i, seq_along(habitat_names_full)] <- habitat_df$area
 
-      # Add the polygon area
-      results_df[i, "Polygon_Area"] <- as.numeric(polygon_area)
+      # Store ONLY habitat areas in CLEAN results (excluding "Other")
+      results_df_clean[i, seq_along(habitat_names)] <- habitat_df$area[habitat_df$value != other_code]
+
+      # Total area for FULL results
+      results_df_full[i, length(habitat_names_full) + 1] <- sum(results_df_full[i, seq_along(habitat_names_full)])
+
+      # Polygon area for FULL results
+      results_df_full[i, "Polygon_Area"] <- as.numeric(polygon_area)
 
       # Subset species occurrences for each group
       total_species <- 0
-      for (k in seq_along(species_groups))
-      {
+      species_counts <- numeric(length(species_groups))
+
+      for (k in seq_along(species_groups)) {
         group_species <- sf::st_drop_geometry(sample)[, species_groups[[k]] + 1]
         species_present <- colSums(group_species > 0)
         num_species <- sum(species_present > 0)
-        results_df[i, length(habitat_names) + 1 + k] <- num_species
+
+        # Store in FULL results
+        results_df_full[i, length(habitat_names_full) + 1 + k] <- num_species
+
+        # Store in CLEAN results
+        species_counts[k] <- num_species
         total_species <- total_species + num_species
       }
 
-      # Store the total number of species
-      results_df[i, length(habitat_names) + length(species_groups) + 2] <- total_species
+      # Store species counts in CLEAN results
+      results_df_clean[i, (length(habitat_names) + 1):(length(habitat_names) + length(species_groups))] <- species_counts
+
+      # Store total species in FULL results
+      results_df_full[i, length(habitat_names_full) + length(species_groups) + 2] <- total_species
     }
 
-    return(results_df)
+    # Return both as a list
+    return(list(
+      full = results_df_full,
+      clean = results_df_clean
+    ))
   }
 
 
@@ -426,11 +463,12 @@ countryside_sar2 <- function(
         points_in_clusters <- split(points_sf, 1:npoints)
         clusters_convex_hulls <- split(sf::st_geometry(squares_sf), 1:npoints)
 
-      } else
+      } else # less clusters than points
       {
+        # k-means clustering (proximity based)
         coords <- sf::st_coordinates(points_sf)
-        kmeans_result <- kmeans(coords, centers = n_clusters, iter.max = 100, nstart = 25)
-        cluster_assignments <- kmeans_result$cluster
+        kmeans_result <- kmeans(coords, centers = n_clusters)
+        cluster_assignments <- kmeans_result$cluster # here
 
         points_in_clusters <- list()
         squares_in_clusters <- list()
@@ -470,7 +508,7 @@ countryside_sar2 <- function(
 
   # ---- SAR analysis function ----
   analyze_sar <- function(results_table,
-                          method_used)
+                          method)
   {
     # Initialize results and check validity for further analysis
     sar_results <- list()
@@ -542,6 +580,48 @@ countryside_sar2 <- function(
     return(sar_results)
   }
 
+
+  #--------- cSAR helper ---------------
+  analyze_countryside_sar <- function(csar_data,
+                                      habitat_names,
+                                      species_group_names) {
+
+
+    csar_results <- list()
+    csar_results$valid <- FALSE
+    csar_results$message <- ""
+
+    if (nrow(csar_data) < 2) {
+      csar_results$message <- "Insufficient data for countryside SAR (need at least 2 samples)"
+      return(csar_results)
+    }
+
+    tryCatch({
+      if (!requireNamespace("sars", quietly = TRUE)) {
+        csar_results$message <- "Package 'sars' is required"
+        return(csar_results)
+      }
+
+      csar_results$model <- sars::sar_countryside(
+        data = csar_data,
+        modType = "power",
+        gridStart = "partial",
+        habNam = habitat_names,
+        spNam = species_group_names
+      )
+
+      csar_results$valid <- TRUE
+      csar_results$message <- "Countryside SAR completed successfully"
+
+    }, error = function(e) {
+      csar_results$message <- paste("Error:", e$message)
+      csar_results$valid <- FALSE
+    })
+
+    return(csar_results)
+  }
+
+
   #---------------------------- 4. Main processing -----------------------------
   points_sf <- sf::st_as_sf(data,
                             coords = c("long", "lat"),
@@ -567,33 +647,53 @@ countryside_sar2 <- function(
                                                     radius,
                                                     convex_hull,
                                                     break_threshold)
+      polygons <- lapply(samples, `[[`, "circle")
+      samples_points <- lapply(samples, `[[`, "points")
 
-      # extract components of circles and points within them
-      polygons <- lapply(samples, \(x) x$circle)
-      samples_points <- lapply(samples, \(x) x$points)
-
-      results_table <- summarize_samples(
+      results <- summarize_samples(
         samples = samples_points,
-        polygons = polygons, #here was polygons
+        polygons = polygons,
         habitat_raster = habitat,
         habitat_names = habitat_names,
         habitat_values = habitat_codes,
         species_groups = sp_groups,
-        species_group_names = grp_names
+        species_group_names = species_group_names
       )
 
-      # Perform SAR analysis
-      sar_analysis <- analyze_sar(results_table,
-                                  method)
+      # Use full table for standard SAR
+      results_table_full <- results$full
+
+      # Use clean table for countryside SAR
+      results_table_clean <- results$clean
+
+      # Standard SAR analysis (uses full table)
+      sar_analysis <- analyze_sar(results_table_full, method)
+
+      # Countryside SAR analysis (uses clean table)
+      csar_analysis <- analyze_countryside_sar(
+        results_table_clean,
+        habitat_names,
+        species_group_names
+      )
 
       # Store results
       runs[[run]] <- list(
         run = run,
-        results_table = results_table,
+        results_table = results_table_full,
         sar_analysis = sar_analysis,
+        csar_analysis = csar_analysis,
         samples = samples,
-        polygons = polygons #here polygons
+        polygons = polygons
       )
+    }
+
+    # Top-level analyses from first run for easy access
+    if (length(runs) > 0) {
+      sar_analysis <- runs[[1]]$sar_analysis
+      csar_analysis <- runs[[1]]$csar_analysis
+    } else {
+      sar_analysis <- list(valid = FALSE, message = "No runs completed")
+      csar_analysis <- list(valid = FALSE, message = "No runs completed")
     }
 
     # results
@@ -602,6 +702,7 @@ countryside_sar2 <- function(
       n_runs = n_runs,
       runs = runs,
       sar_analysis = sar_analysis,
+      csar_analysis = csar_analysis,
       points_sf = points_sf,
       convex_hull = convex_hull,
       hull_source = ifelse(is.null(custom_hull), "derived", "custom")
@@ -616,41 +717,52 @@ countryside_sar2 <- function(
                                          squares_sf,
                                          cluster_sizes)
 
-    samples_points <- lapply(samples, \(x) x$points)
-    clusters_chulls <- lapply(samples, \(x) x$chulls)
+    samples_points <- lapply(samples, `[[`, "points")
+    clusters_chulls <- lapply(samples, `[[`, "chulls")
 
     # Flatten the nested lists for summarize_samples
     samples_flat <- unlist(samples_points, recursive = FALSE)
     polygons_flat <- unlist(clusters_chulls, recursive = FALSE)
 
-    results_table <- summarize_samples(
+    results <- summarize_samples(
       samples = samples_flat,
       polygons = polygons_flat,
       habitat_raster = habitat,
       habitat_names = habitat_names,
       habitat_values = habitat_codes,
       species_groups = sp_groups,
-      species_group_names = grp_names
+      species_group_names = species_group_names
     )
 
-    # Perform SAR analysis
-    sar_analysis <- analyze_sar(results_table,
-                                method)
+    # Use full table for standard SAR
+    results_table_full <- results$full
 
-    # results
+    # Use clean table for countryside SAR
+    results_table_clean <- results$clean
+
+    # Standard SAR analysis (uses full table)
+    sar_analysis <- analyze_sar(results_table_full, method)
+
+    # Countryside SAR analysis (uses clean table)
+    csar_analysis <- analyze_countryside_sar(
+      results_table_clean,
+      habitat_names,
+      species_group_names
+    )
+
+    # result table
     res <- list(
       method = method,
-      n_runs = 1,
-      runs = list(list(
-        run = 1,
-        results_table = results_table,
+        results_table = results_table_full,
         sar_analysis = sar_analysis,
+        csar_analysis = csar_analysis,
         samples = samples,
         squares_sf = squares_sf,
         clusters_chulls = clusters_chulls
-      )),
+      )
+      sar_analysis = sar_analysis
+      csar_analysis = csar_analysis
       points_sf = points_sf
-    )
   }
 
   return(res)

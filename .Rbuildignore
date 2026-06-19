@@ -1,2 +1,4 @@
 ^firsttestpackage\.Rproj$
 ^\.Rproj\.user$
+^doc$
+^Meta$

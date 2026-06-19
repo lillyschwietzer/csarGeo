@@ -42,11 +42,9 @@ countryside_sar2(
 
 \item{cluster_sizes}{Numerical vector that defines the amount of levels for the hierarchical "Clusters" approach as well as the amount of clusters within each level, e.g. c(1, 4, 16, 64, 256) -> 5 levels, first level 256 clusters, second level 64 clusters, etc.}
 
-\item{habitat}{Land-use raster of the sampling location.}
+\item{habitat}{Land-use raster of the sampling location, a .tif file.}
 
 \item{habitat_names}{Character vector with the names of the land-use types of the land-use raster defined in 'habitat'.}
-
-\item{habitat_codes}{Numerical vector of raster values corresponding to each habitat name.}
 
 \item{classification}{Species classification file. A table with a first column for species names and the following columns as binary (0/1) group indicators.}
 
@@ -63,10 +61,12 @@ countryside_sar2(
 \item{n_runs}{Option to run the function multiple times, default value = 1.}
 }
 \value{
-A list containing results_table, spatial objects, and sampling information.
+A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
 }
 \description{
-Countryside-SAR
+A function to perform a complete SAR analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach, which assigns standardized squares to each sampling point and groups them in increasing size and decreasing count for each level.
+
+See Details for more information.
 }
 \examples{
 \dontrun{

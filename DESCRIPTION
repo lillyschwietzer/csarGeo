@@ -1,11 +1,27 @@
-Package: firsttestpackage
-Title: What the Package Does (One Line, Title Case)
+Package: csarGeo
+Title: Classic SAR and cSAR Modeling and Visualization
 Version: 0.0.0.9000
-Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
-License: `use_mit_license()`, `use_gpl3_license()` or friends to pick a
-    license
+Authors@R: c(
+    person(
+        given = "Lilly",
+        family = "Schwietzer",
+        email = "lillyschwietzer@icloud.com",
+        role = c("aut", "cre"),
+        comment = c(affiliation = "Institute of Biology, Martin Luther University Halle-Wittenberg")
+    ), 
+    person(
+        given = "Henrique",
+        family = "Pereira",
+        email = "hpereira@idiv.de",
+        role = c("aut", "ctb"),
+        comment = c(
+            affiliation = "German Centre for Integrative Biodiversity Research (iDiv) Halle-Jena-Leipzig",
+            affiliation2 = "Institute of Biology, Martin Luther University Halle-Wittenberg"
+        )
+    )
+  )
+Description: Contains two functions to analyse species data with a SAR or cSAR and to visualize the results.
+License: `use_mit_license()`
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
@@ -14,8 +30,14 @@ Imports:
     purrr,
     readxl,
     sf,
-    terra
+    terra,
+    sars,
+    ggplot2,
+    reshape2
 Suggests: 
     knitr,
     rmarkdown
 VignetteBuilder: knitr
+Depends: 
+    R (>= 3.5)
+LazyData: true
