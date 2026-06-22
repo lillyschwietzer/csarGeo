@@ -1,12 +1,19 @@
 #' Countryside-SAR
 #' @description
-#' A function to perform a complete base SAR analysis or a countryside SAR (cSAR) analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. By choosing the "circles" pathway, the function samples species data in stepwise increasing circles, while "clusters" assigns standardized squares to each sampling point and then groups them in clusters of increasing size based on proximity. The sampled data is then aggregated and used for the SAR or cSAR analyis, the latter includes habitat affinity values of the species groups to different habitat types.
+#' A function to perform a complete classic SAR analysis or a countryside SAR (cSAR) analysis. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. Using "circles", the function samples species data in step wise increasing circles, while "clusters" groups it in clusters of increasing size based on their proximity to one another. The sampled data is then aggregated and used for the SAR or cSAR analysis, the latter includes habitat affinity values of the species groups to different habitat types.
 #'
-#' @param data Binary species data table of the following structure: the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.
+#' @param data Binary species data table, the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.
 #' @param crs Coordinate reference system (CRS) of the sampling location.
-#' @param method Parameter to select the sampling method: "circles" or "clusters". Pathway "circles" samples species data stepwise within a defined hull around all sampling points based on the parameter 'radius', beginning with a random starting point. Pathway "clusters" assigns each sampling point a standardized square with the extent of 'square_size'. The squares are then grouped according to 'cluster_sizes' based on their proximity to one another. The species count of all circles or clusters is then aggregated into one result table.
-#' @param radius Defines the radius size as well as the total amount of circles for method: "circles". E.g. c(2000 * 1:10), sample for 10 circles with an extent of 2000 units each.
-#' @param break_threshold Initiates break-protocol for method "circles" based on the proportion of the circular vector that lies inside the convex hull. E.g. break_threshold = 0.9 -> if less than 90 % of the circle lies inside of the hull, stop.
+#' @param method Character string specifying the sampling method. Options:
+#'   \itemize{
+#'     \item \code{"circles"}: Samples species data within expanding circles
+#'       from a random starting point. Sampling is limited by a convex hull defined by
+#'       \code{custom_hull}.
+#'     \item \code{"clusters"}: Assigns each sampling point a square of size
+#'       \code{square_size}.
+#'   }
+#' @param radius Numeric vector defining the radii for method = "circles". E.g. c(2000 * 1:10), sample in 10 circles with an extent of 2000 units each.
+#' @param break_threshold Defines break-protocol-sensitivity for method "circles" based on the proportion of the circular vector that lies inside the convex hull. E.g. break_threshold = 0.9 -> if less than 90 % of the circle lies inside of the hull, stop sampling.
 #' @param custom_hull Import a polygon hull for method "circles". If method = "clusters" the function will ignore the imported hull and auto-generate a hull instead. If custom_hull = NULL, the function auto-generates a hull for method "circles".
 #' @param square_size The size of the initial square buffer for each sampling point for method "clusters".
 #' @param cluster_sizes Numerical vector that defines the amount of levels as well as the amount of sampling points within each cluster of each level for the hierarchical "clusters" approach. E.g. c(1, 4, 16, 64, 256) -> 5 levels for 256 sampling points; first level 256 clusters, second level 64 clusters, etc.

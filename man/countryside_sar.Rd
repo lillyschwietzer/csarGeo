@@ -25,15 +25,22 @@ countryside_sar(
 )
 }
 \arguments{
-\item{data}{Binary species data table of the following structure: the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.}
+\item{data}{Binary species data table, the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.}
 
 \item{crs}{Coordinate reference system (CRS) of the sampling location.}
 
-\item{method}{Parameter to select the sampling method: "circles" or "clusters". Pathway "circles" samples species data stepwise within a defined hull around all sampling points based on the parameter 'radius', beginning with a random starting point. Pathway "clusters" assigns each sampling point a standardized square with the extent of 'square_size'. The squares are then grouped according to 'cluster_sizes' based on their proximity to one another. The species count of all circles or clusters is then aggregated into one result table.}
+\item{method}{Character string specifying the sampling method. Options:
+\itemize{
+\item \code{"circles"}: Samples species data within expanding circles
+from a random starting point. Sampling is limited by a convex hull defined by
+\code{custom_hull}.
+\item \code{"clusters"}: Assigns each sampling point a square of size
+\code{square_size}.
+}}
 
-\item{radius}{Defines the radius size as well as the total amount of circles for method: "circles". E.g. c(2000 * 1:10), sample for 10 circles with an extent of 2000 units each.}
+\item{radius}{Numeric vector defining the radii for method = "circles". E.g. c(2000 * 1:10), sample in 10 circles with an extent of 2000 units each.}
 
-\item{break_threshold}{Initiates break-protocol for method "circles" based on the proportion of the circular vector that lies inside the convex hull. E.g. break_threshold = 0.9 -> if less than 90 \% of the circle lies inside of the hull, stop.}
+\item{break_threshold}{Defines break-protocol-sensitivity for method "circles" based on the proportion of the circular vector that lies inside the convex hull. E.g. break_threshold = 0.9 -> if less than 90 \% of the circle lies inside of the hull, stop sampling.}
 
 \item{custom_hull}{Import a polygon hull for method "circles". If method = "clusters" the function will ignore the imported hull and auto-generate a hull instead. If custom_hull = NULL, the function auto-generates a hull for method "circles".}
 
@@ -63,7 +70,7 @@ countryside_sar(
 A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
 }
 \description{
-A function to perform a complete base SAR analysis or a countryside SAR (cSAR) analysis using binary species presence/absence data. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. By choosing the "circles" pathway, the function samples species data in stepwise increasing circles, while "clusters" assigns standardized squares to each sampling point and then groups them in clusters of increasing size based on proximity. The sampled data is then aggregated and used for the SAR or cSAR analyis, the latter includes habitat affinity values of the species groups to different habitat types.
+A function to perform a complete classic SAR analysis or a countryside SAR (cSAR) analysis. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. Using "circles", the function samples species data in step wise increasing circles, while "clusters" groups it in clusters of increasing size based on their proximity to one another. The sampled data is then aggregated and used for the SAR or cSAR analysis, the latter includes habitat affinity values of the species groups to different habitat types.
 }
 \examples{
 \dontrun{
