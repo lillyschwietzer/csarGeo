@@ -25,7 +25,18 @@ countryside_sar(
 )
 }
 \arguments{
-\item{data}{Binary species data table, the first column is the location ID, second and third columns are longitude and latitude values of the sampling locations, columns 4 and onward contain binary presence/absence data of the species.}
+\item{data}{A data frame containing binary species data with the following
+required columns:
+\itemize{
+\item Column 1: Location ID (character or numeric)
+\item Column 2: Longitude or X coordinate (numeric). Can be decimal
+degrees (e.g., -8.5) or projected coordinates (e.g., 500000) depending
+on the CRS.
+\item Column 3: Latitude or Y coordinate (numeric). Can be decimal
+degrees (e.g., 40.2) or projected coordinates (e.g., 4500000) depending
+on the CRS.
+\item Columns 4+: Species presence/absence (0 = absent, 1 = present)
+}}
 
 \item{crs}{Coordinate reference system (CRS) of the sampling location.}
 
@@ -38,21 +49,26 @@ from a random starting point. Sampling is limited by a convex hull defined by
 \code{square_size}.
 }}
 
-\item{radius}{Numeric vector defining the radii for method = "circles". E.g. c(2000 * 1:10), sample in 10 circles with an extent of 2000 units each.}
+\item{radius}{Numeric vector defining the radii when \code{method = "circles"}. E.g. \code{radius = 2000 * 1:10}, sample in 10 circles with an extent of 2000 units each.}
 
-\item{break_threshold}{Defines break-protocol-sensitivity for method "circles" based on the proportion of the circular vector that lies inside the convex hull. E.g. break_threshold = 0.9 -> if less than 90 \% of the circle lies inside of the hull, stop sampling.}
+\item{break_threshold}{Numeric value ranging from 0 - 1, defines break-protocol-sensitivity for \code{method = "circles"} based on the proportion of the circular vector that lies inside the convex hull. E.g. \code{break_threshold = 0.9} -> if less than 90 \% of the circle lies inside of the hull, stop sampling. Defaults to 0.5.}
 
-\item{custom_hull}{Import a polygon hull for method "circles". If method = "clusters" the function will ignore the imported hull and auto-generate a hull instead. If custom_hull = NULL, the function auto-generates a hull for method "circles".}
+\item{custom_hull}{Optional polygon hull import (sf or sfc object) for \code{method "circles"} to define the study area boundary. If \code{custom_hull = NULL}, the function auto-generates a hull for \code{method = "circles"}. For \code{method = "clusters"} the function will ignore the imported hull and auto-generate a hull instead.}
 
-\item{square_size}{The size of the initial square buffer for each sampling point for method "clusters".}
+\item{square_size}{Numeric value defining the size of the square buffer created around each sampling point for \code{method = "clusters"}. Required if \code{method = "clusters"}.}
 
-\item{cluster_sizes}{Numerical vector that defines the amount of levels as well as the amount of sampling points within each cluster of each level for the hierarchical "clusters" approach. E.g. c(1, 4, 16, 64, 256) -> 5 levels for 256 sampling points; first level 256 clusters, second level 64 clusters, etc.}
+\item{cluster_sizes}{Numeric vector defining the hierarchical clustering levels for \code{method = "clusters"}. Each value specifies the approximate number of points per cluster at a given level and should therefore be divisors of the total number of points. The length of \code{cluster_sizes} defines the number of clustering levels. E.g. \code{cluster_sizes = c(1, 4, 16, 64, 256)}, creates 5 levels of 256, 64, 16, 4 and 1 clusters each. Required if \code{method = "clusters"}.}
 
-\item{habitat}{Land-use raster of the sampling location, a .tif file.}
+\item{habitat}{Land-use raster input, SpatRaster or file path to a raster file (e.g. a .tif) containing land-use/land-cover classification of the study area. Categorical values in the raster should correspond to the habitat types defined in \code{habitat_names}.}
 
-\item{habitat_names}{Character vector with the names of the land-use types 'habitat' land-use raster, legend of habitat.}
+\item{habitat_names}{Character vector specifying the names of habitat types corresponding to the values in the \code{habitat} raster, acts as a legend to the land-use raster. E.g. , \code{habitat_names = c("Forest", "Agriculture", "Shrubland")} if raster values 1, 2, 3 represent these classes.}
 
-\item{classification}{Species classification file. A table with a first column for species names and the following columns as binary (0/1) group indicators.}
+\item{classification}{A data frame defining species classifications with the following structure:
+\itemize{
+\item Column 1: Species name (must match the name used in \code{data})
+\item Column 2+: Species group (binary, 0 = doesn't belong to group, 1 = belongs to group, multiple groups per species possible)
+}
+If \code{classification = NULL}, all group columns are used for analysis.}
 
 \item{groups}{Character vector to define the group columns used for analysis. If NULL = use all columns except first.}
 
@@ -81,7 +97,6 @@ res <- countryside_sar(
   radius = 2000 * 1:10,
   habitat = myraster,
   habitat_names = c("Forest", "Agriculture", "Shrubland"),
-  habitat_codes = 1:3,
   classification = myclassif,
   groups = "Forest",
   seed = 123
