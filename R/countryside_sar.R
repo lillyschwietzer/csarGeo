@@ -1,4 +1,4 @@
-#' Countryside-SAR
+#' Countryside-SAR do we see this
 #' @description
 #' A function to perform a complete classic SAR analysis or a countryside SAR (cSAR) analysis. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. Using "circles", the function samples species data in step wise increasing circles, while "clusters" groups it in clusters of increasing size based on their proximity to one another. The sampled data is then aggregated and used for the SAR or cSAR analysis, the latter includes habitat affinity values of the species groups to different habitat types.
 #'
