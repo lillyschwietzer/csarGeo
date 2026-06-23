@@ -123,7 +123,7 @@ countryside_sar <- function(
     stop("Data must have at least 4 columns: locationID, long, lat, and binary species data.")
 
   # crs
-  if (is.null(crs)) stop("Coordinate reference system (crs) must be provided.")
+  if (is.null(crs)) stop("No Coordinate reference system (crs) provided.")
 
   # n_runs
   if (!is.numeric(n_runs) || n_runs < 1 || n_runs != round(n_runs)) {
