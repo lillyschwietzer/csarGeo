@@ -31,7 +31,6 @@
 #'       on the CRS.
 #'     \item Columns 4+: Species presence/absence (0 = absent, 1 = present)
 #'   }
-#' @param crs Coordinate reference system (CRS) of the sampling location.
 #' @param method Character string specifying the sampling method. Options:
 #'   \itemize{
 #'     \item \code{"circles"}: Samples species data within expanding circles
@@ -55,7 +54,6 @@
 #' @param groups Character vector specifying which columns from \code{classification} to use as species groups. If \code{groups = NULL} (default), all group columns are used for analysis.
 #' @param seed Optional integer for reproducibility, defaults to \code{NULL}.
 #' @param transform_to_utm transforms geographic coordinates (longitude/latitude) to UTM projection. If data was sampled in polar, equatorial or across very large regions, use an appropriate projection with \code{target_crs} instead of UTM to avoid distortion. Defaults to \code{FALSE}.
-#' @param target_crs Optional numeric EPSG code for coordinate transformation. Use this to specify a custom projection (e.g., national or local CRS) instead of UTM. Defaults to \code{target_crs = NULL}.
 #' @param n_runs Integer value, number of iterations for \code{method = "circles"}. Each run uses a different random starting point for the expanding circles. For \code{method = "clusters"}, this parameter is ignored as clustering is deterministic. Default value \code{n_runs = 1}.
 #'
 #' @return A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
@@ -77,7 +75,6 @@
 #' }
 countryside_sar <- function(
     data,
-    crs = NULL,  # ← Make optional
     method = c("circles", "clusters"),
     # Circles parameters
     radius = NULL,
@@ -94,7 +91,6 @@ countryside_sar <- function(
     groups = NULL,
     seed = NULL,
     # Coordinate transformation options
-    target_crs = NULL,
     n_runs = 1
 ) {
 
@@ -107,51 +103,14 @@ countryside_sar <- function(
   if (!is.null(seed)) set.seed(seed)
 
   # Determine CRS: from parameter or from raster
-  if (is.null(crs)) {
     if (is.null(habitat)) {
-      stop("Either 'crs' must be provided, or 'habitat' raster with CRS information.")
+      stop("Habitat raster with CRS information must be provided.")
     }
     # Extract CRS from raster
     crs <- terra::crs(habitat)
     if (is.na(crs) || crs == "") {
-      stop("Raster has no CRS information. Please provide 'crs' parameter.")
+      stop("Raster has no CRS information.")
     }
-  }
-
-  # Optional: Coordinate transformation (if target_crs provided)
-  if (!is.null(target_crs)) {
-
-    # Check if coordinates are already projected
-    if (any(abs(data$long) > 180) || any(abs(data$lat) > 90)) {
-      stop("Coordinates appear to already be in a projected CRS. ",
-           "Set target_crs = NULL or check your data.")
-    }
-
-    # Validate target_crs is numeric
-    if (!is.numeric(target_crs)) {
-      stop("target_crs must be a numeric EPSG code (e.g., 3763 for Portugal TM06)")
-    }
-
-    # Create sf object with user-provided CRS
-    points_sf_original <- sf::st_as_sf(data, coords = c("long", "lat"), crs = crs)
-
-    # Transform coordinates
-    points_sf_transformed <- sf::st_transform(points_sf_original, crs = target_crs)
-
-    # Extract transformed coordinates
-    coords <- sf::st_coordinates(points_sf_transformed)
-
-    # Rebuild data frame with transformed coordinates
-    data <- data.frame(
-      locationID = data[[1]],
-      long = coords[, "X"],
-      lat = coords[, "Y"],
-      data[, 4:ncol(data)]
-    )
-
-    # Update CRS to the target
-    crs <- target_crs
-  }
 
   #---------------------------- 1. Input validation ----------------------------
   method <- match.arg(method)

@@ -6,7 +6,6 @@
 \usage{
 countryside_sar(
   data,
-  crs = NULL,
   method = c("circles", "clusters"),
   radius = NULL,
   break_threshold = 0.5,
@@ -18,7 +17,6 @@ countryside_sar(
   classification = NULL,
   groups = NULL,
   seed = NULL,
-  target_crs = NULL,
   n_runs = 1
 )
 }
@@ -35,8 +33,6 @@ degrees (e.g., 40.2) or projected coordinates (e.g., 4500000) depending
 on the CRS.
 \item Columns 4+: Species presence/absence (0 = absent, 1 = present)
 }}
-
-\item{crs}{Coordinate reference system (CRS) of the sampling location.}
 
 \item{method}{Character string specifying the sampling method. Options:
 \itemize{
@@ -70,8 +66,6 @@ from a random starting point. Sampling is limited by a convex hull defined by
 \item{groups}{Character vector specifying which columns from \code{classification} to use as species groups. If \code{groups = NULL} (default), all group columns are used for analysis.}
 
 \item{seed}{Optional integer for reproducibility, defaults to \code{NULL}.}
-
-\item{target_crs}{Optional numeric EPSG code for coordinate transformation. Use this to specify a custom projection (e.g., national or local CRS) instead of UTM. Defaults to \code{target_crs = NULL}.}
 
 \item{n_runs}{Integer value, number of iterations for \code{method = "circles"}. Each run uses a different random starting point for the expanding circles. For \code{method = "clusters"}, this parameter is ignored as clustering is deterministic. Default value \code{n_runs = 1}.}
 
