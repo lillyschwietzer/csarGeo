@@ -1,11 +1,17 @@
 #' Visualize countryside_sar results
 #'
 #' @description
-#' A function to visualize the results of countryside_sar() from the csarGeo-Package. It can generate three plot types: "map", a plot of the polygon hull with the sampling locations and the chosen sampling method, "sar" for the base SAR analysis and "csar", only available for a result of method "clusters" to create an affinity heat map of the species groups to different habitats.
+#' A function to visualize the results of \code{countryside_sar()} from the csarGeo-Package. It can generate three plot types: "map", a plot of the polygon hull with the sampling locations and the chosen sampling method, "sar" for the base SAR analysis and "csar", only available for a result of method "clusters" to create an affinity heat map of the species groups to different habitats.
 #'
 #'
 #' @param result Output object from countryside_sar function.
-#' @param plot_type Type of plot: "map" to create a map of the polygon hull + sampling locations with the chosen sampling method, "sar" for a simple log-log scaled linear regression and "csar" for a heatmap of species group affinities to habitat types. "map" and  "sar" are available for results of both "circles" and "clusters", "csar" is only available for results of "clusters".
+#' @param plot_type Defines the type of plot. Three possible options
+#'   \itemize{
+#'     \item \code{map} (map of the polygon hull + sampling locations with the chosen sampling method)
+#'     \item \code{sar} (log-log scaled linear regression)
+#'     \item \code{csar} (heatmap of species group affinities to habitat types)
+#'     }
+#' \code{map} and \code{sar} are available for results of both \code{method = circles} and \code{method = clusters}. \code{plot_type = csar} is only available for results of \code{method = clusters}.
 #' @param plot_all_runs Plot all runs of "circles" into one grid. Defaults to TRUE.
 #' @param plot_run_n Plot only the result of the n-th run of "circles". Defaults to NULL.
 #' @param plot_all_levels Plot all clustering levels of method "clusters" into one grid. Defaults to TRUE.

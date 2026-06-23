@@ -6,7 +6,7 @@
 \usage{
 countryside_sar(
   data,
-  crs,
+  crs = NULL,
   method = c("circles", "clusters"),
   radius = NULL,
   break_threshold = 0.5,
@@ -18,9 +18,7 @@ countryside_sar(
   classification = NULL,
   groups = NULL,
   seed = NULL,
-  transform_to_utm = FALSE,
   target_crs = NULL,
-  warn_projection = TRUE,
   n_runs = 1
 )
 }
@@ -67,26 +65,40 @@ from a random starting point. Sampling is limited by a convex hull defined by
 \itemize{
 \item Column 1: Species name (must match the name used in \code{data})
 \item Column 2+: Species group (binary, 0 = doesn't belong to group, 1 = belongs to group, multiple groups per species possible)
-}
-If \code{classification = NULL}, all group columns are used for analysis.}
+}}
 
-\item{groups}{Character vector to define the group columns used for analysis. If NULL = use all columns except first.}
+\item{groups}{Character vector specifying which columns from \code{classification} to use as species groups. If \code{groups = NULL} (default), all group columns are used for analysis.}
 
-\item{seed}{Optional seed for reproducibility.}
+\item{seed}{Optional integer for reproducibility, defaults to \code{NULL}.}
 
-\item{transform_to_utm}{If TRUE, transforms geographic coordinates (long/lat) to UTM projection. It automatically detects the appropriate UTM zone based on mean longitude. If data was sampled in polar, equatorial or very large regions, use an appropriate projection instead of UTM.}
+\item{target_crs}{Optional numeric EPSG code for coordinate transformation. Use this to specify a custom projection (e.g., national or local CRS) instead of UTM. Defaults to \code{target_crs = NULL}.}
 
-\item{target_crs}{Optional numeric EPSG code for coordinate transformation. If provided it overrides the automatic UTM zone detection. Use this when you need a specific national or local projection instead of UTM.}
+\item{n_runs}{Integer value, number of iterations for \code{method = "circles"}. Each run uses a different random starting point for the expanding circles. For \code{method = "clusters"}, this parameter is ignored as clustering is deterministic. Default value \code{n_runs = 1}.}
 
-\item{warn_projection}{Defaults to TRUE, will warn the user about possible projection issues.}
-
-\item{n_runs}{Option to run the analyis multiple times, default value = 1. Only available for method "circles" as "clusters" is deterministic, multiple runs produce the same result.}
+\item{transform_to_utm}{transforms geographic coordinates (longitude/latitude) to UTM projection. If data was sampled in polar, equatorial or across very large regions, use an appropriate projection with \code{target_crs} instead of UTM to avoid distortion. Defaults to \code{FALSE}.}
 }
 \value{
 A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
 }
 \description{
 A function to perform a complete classic SAR analysis or a countryside SAR (cSAR) analysis. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. Using "circles", the function samples species data in step wise increasing circles, while "clusters" groups it in clusters of increasing size based on their proximity to one another. The sampled data is then aggregated and used for the SAR or cSAR analysis, the latter includes habitat affinity values of the species groups to different habitat types.
+}
+\details{
+The function implements two complementary sampling approaches:
+
+\strong{Circles method:}
+Starting from a randomly selected point, circles expand outward at radii
+defined by \code{radius}. Sampling stops when the proportion of circle area
+falling within the convex hull drops below \code{break_threshold}. This
+approach is stochastic; use \code{seed} and \code{n_runs} for reproducibility.
+
+\strong{Clusters method:}
+Each sampling point is buffered with a square of size \code{square_size}.
+These squares are then grouped hierarchically using k-means clustering
+based on spatial proximity. The \code{cluster_sizes} vector defines the
+target number of points per cluster at each level.
+
+For a detailed explanation, please colsult the vignette of the csarGeo package.
 }
 \examples{
 \dontrun{

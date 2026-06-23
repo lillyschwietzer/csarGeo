@@ -2,6 +2,23 @@
 #' @description
 #' A function to perform a complete classic SAR analysis or a countryside SAR (cSAR) analysis. It contains two analysis pathways: a nested "circles" approach, or a hierarchical "clusters" approach. Using "circles", the function samples species data in step wise increasing circles, while "clusters" groups it in clusters of increasing size based on their proximity to one another. The sampled data is then aggregated and used for the SAR or cSAR analysis, the latter includes habitat affinity values of the species groups to different habitat types.
 #'
+#' @details
+#' The function implements two complementary sampling approaches:
+#'
+#' \strong{Circles method:}
+#' Starting from a randomly selected point, circles expand outward at radii
+#' defined by \code{radius}. Sampling stops when the proportion of circle area
+#' falling within the convex hull drops below \code{break_threshold}. This
+#' approach is stochastic; use \code{seed} and \code{n_runs} for reproducibility.
+#'
+#' \strong{Clusters method:}
+#' Each sampling point is buffered with a square of size \code{square_size}.
+#' These squares are then grouped hierarchically using k-means clustering
+#' based on spatial proximity. The \code{cluster_sizes} vector defines the
+#' target number of points per cluster at each level.
+#'
+#' For a detailed explanation, please colsult the vignette of the csarGeo package.
+#'
 #' @param data A data frame containing binary species data with the following
 #'   required columns:
 #'   \itemize{
@@ -60,7 +77,7 @@
 #' }
 countryside_sar <- function(
     data,
-    crs,
+    crs = NULL,  # ← Make optional
     method = c("circles", "clusters"),
     # Circles parameters
     radius = NULL,
@@ -79,7 +96,7 @@ countryside_sar <- function(
     # Coordinate transformation options
     target_crs = NULL,
     n_runs = 1
-)  {
+) {
 
   # create vector for habitat codes of the raster
   habitat_codes <- seq_along(habitat_names)
@@ -88,6 +105,18 @@ countryside_sar <- function(
 
   # Optional: Set seed for reproducibility
   if (!is.null(seed)) set.seed(seed)
+
+  # Determine CRS: from parameter or from raster
+  if (is.null(crs)) {
+    if (is.null(habitat)) {
+      stop("Either 'crs' must be provided, or 'habitat' raster with CRS information.")
+    }
+    # Extract CRS from raster
+    crs <- terra::crs(habitat)
+    if (is.na(crs) || crs == "") {
+      stop("Raster has no CRS information. Please provide 'crs' parameter.")
+    }
+  }
 
   # Optional: Coordinate transformation (if target_crs provided)
   if (!is.null(target_crs)) {
