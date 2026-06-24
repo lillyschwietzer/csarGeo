@@ -2,7 +2,7 @@
 % Please edit documentation in R/countryside_sar.R
 \name{countryside_sar}
 \alias{countryside_sar}
-\title{Countryside-SAR do we see this}
+\title{Countryside-SAR}
 \usage{
 countryside_sar(
   data,
