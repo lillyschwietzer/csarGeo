@@ -25,13 +25,13 @@
 #' plot_countryside_sar(res, plot_type = "map")
 #' }
 visuals_sar <- function(result,
-                       plot_type = NULL, # "map", "sar", "csar",
-                       # Circles
-                       plot_all_runs = TRUE,
-                       plot_run_n = NULL,
-                       # Clusters
-                       plot_all_levels = TRUE,
-                       plot_level_n = NULL) {
+                        plot_type = NULL, # "map", "sar", "csar",
+                        # Circles
+                        plot_all_runs = TRUE,
+                        plot_run_n = NULL,
+                        # Clusters
+                        plot_all_levels = TRUE,
+                        plot_level_n = NULL) {
 
   #----------------- Input validation ------------------
   if (!plot_type %in% c("map", "sar", "csar")) {
@@ -82,17 +82,29 @@ visuals_sar <- function(result,
       log_area <- sar_results[["log_area"]]
       log_sp <- sar_results[["log_sp"]]
 
+      intercept <- coef(sar_results[["lm_model"]])[1]
+      slope <- coef(sar_results[["lm_model"]])[2]
+      r_squared <- sar_results[["lm_summary"]]$r.squared
+
       plot(log_area, log_sp,
            xlab = "log(Area)",
            ylab = "log(Species Richness)",
            main = main_title,
            pch = 16)
 
+      grid()  # Add grid
+
       abline(sar_results[["lm_model"]], col = "red", lwd = 2)
 
-      r2 <- sar_results[["lm_summary"]][["r.squared"]]
-      legend("bottomright", legend = paste("R² =", round(r2, 3)), bty = "n")
+      # Formula, slope, R² as legend in upper left (no box)
+      legend_text <- paste0(
+        "log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x\n",
+        "Slope (z) = ", round(slope, 3), "\n",
+        "R² = ", round(r_squared, 3)
+      )
+      legend("topleft", legend = legend_text, bty = "n", cex = 0.9)
     }
+
 
   } else { # method == "clusters"
 
@@ -124,16 +136,27 @@ visuals_sar <- function(result,
       log_area <- sar_results[["log_area"]]
       log_sp <- sar_results[["log_sp"]]
 
+      intercept <- coef(sar_results[["lm_model"]])[1]
+      slope <- coef(sar_results[["lm_model"]])[2]
+      r_squared <- sar_results[["lm_summary"]]$r.squared
+
       plot(log_area, log_sp,
            xlab = "log(Area)",
            ylab = "log(Species Richness)",
            main = main_title,
            pch = 16)
 
+      grid()  # Add grid
+
       abline(sar_results[["lm_model"]], col = "red", lwd = 2)
 
-      r2 <- sar_results[["lm_summary"]][["r.squared"]]
-      legend("bottomright", legend = paste("R² =", round(r2, 3)), bty = "n")
+      # Formula, slope, R² as legend in upper left (no box)
+      legend_text <- paste0(
+        "log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x\n",
+        "Slope (z) = ", round(slope, 3), "\n",
+        "R² = ", round(r_squared, 3)
+      )
+      legend("topleft", legend = legend_text, bty = "n", cex = 0.9)
     }
 
     # Affinity Heatmap
@@ -151,7 +174,7 @@ visuals_sar <- function(result,
       # Create heatmap
       ggplot2::ggplot(affinity_long,
                       ggplot2::aes(x = Habitat, y = Species_Group, fill = Affinity)) +
-        ggplot2::geom_tile(color = "white", size = 0.5) +
+        ggplot2::geom_tile(color = "white", linewidth = 0.5) +
         ggplot2::scale_fill_viridis_c(
           name = "Affinity",
           limits = c(0, 1),
@@ -159,7 +182,7 @@ visuals_sar <- function(result,
           direction = -1
         ) +
         ggplot2::geom_text(ggplot2::aes(label = round(Affinity, 3)),
-                           color = "white", size = 3.5) +
+                           color = "white", linewidth = 3.5) +
         ggplot2::labs(title = "Species Habitat Affinity",
                       x = "Habitat Type",
                       y = "Species Group") +
@@ -213,14 +236,35 @@ visuals_sar <- function(result,
 
     # ----------- SAR PLOT -----------
     if (plot_type == "sar") {
-      run_to_plot <- if (!is.null(plot_run_n)) plot_run_n else 1
-      sar_results <- result[["runs"]][[run_to_plot]][["sar_analysis"]]
 
-      if (sar_results$valid) {
-        plot_sar_circles(sar_results, main_title = paste("SAR - Run", run_to_plot))
+      if (n_runs > 1) {
+        # Grid for multiple runs
+        n_cols <- ceiling(sqrt(n_runs))
+        n_rows <- ceiling(n_runs / n_cols)
+        par(mfrow = c(n_rows, n_cols), mar = c(3, 3, 3, 1))
+
+        for (run in 1:n_runs) {
+          sar_results <- result[["runs"]][[run]][["sar_analysis"]]
+          if (sar_results$valid) {
+            plot_sar_circles(sar_results, main_title = paste("Run", run))
+          } else {
+            plot(1, 1, type = "n", axes = FALSE, xlab = "", ylab = "")
+            text(1, 1, paste("Run", run, "\nInvalid"), col = "red", cex = 1.2)
+          }
+        }
+        par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
+
       } else {
-        cat("SAR analysis not valid for run", run_to_plot, "\n")
-        cat("Message:", sar_results$message, "\n")
+        # Single run
+        run_to_plot <- if (!is.null(plot_run_n)) plot_run_n else 1
+        sar_results <- result[["runs"]][[run_to_plot]][["sar_analysis"]]
+
+        if (sar_results$valid) {
+          plot_sar_circles(sar_results, main_title = paste("SAR - Run", run_to_plot))
+        } else {
+          cat("SAR analysis not valid for run", run_to_plot, "\n")
+          cat("Message:", sar_results$message, "\n")
+        }
       }
     }
 
