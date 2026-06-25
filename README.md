@@ -86,6 +86,27 @@ plot(land_use)
 
 # 2. Example Analysis
 
-The following example only contains details about one of the two possible analysis pathways of csarGeo. For a more detailed explanation, please consult the vignette.
+The example below only contains information regarding the the analysis method "clusters", which is one of two possible pathways of the csarGeo package. For a detailed explanation as well as examples of both pathways, please consult the vignette.
+
+## 2.1) Analysis Function countryside_sar()
+
+```{r}
+res_cl <- countryside_sar(
+  data = species_data,
+  method = "clusters",
+  square_size = 2000,
+  cluster_sizes = c(1, 4, 16, 64, 256),
+  habitat = land_use,
+  habitat_names = c("Forest", "Agriculture", "Shrubland"),
+  classification = classes_clusters,
+groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
+)
+```
+
+![](vignettes/images/resoverview_clusters.jpg){width="Infinity"}
+
+## 2.2) Visualization Function visuals_sar()
+
+Visuals_sar() offers three possible plot options: "map", "sar" and "csar".
 
 # 3. References
