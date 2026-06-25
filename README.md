@@ -8,11 +8,13 @@ The package contains an associated vignette with detailed example usages for bot
 
 -   [Package Installation](https://github.com/lillyschwietzer/csarGeo/tree/main#1-installation)
 
--   Example Analysis
+-   [Example Analysis](https://github.com/lillyschwietzer/csarGeo/tree/main#2-example-analysis)
 
--   References
+-   [References](https://github.com/lillyschwietzer/csarGeo/tree/main#3-references)
 
 # 1. Installation
+
+## 1.1) csarGeo Package
 
 Install package from GitHub:
 
@@ -21,6 +23,33 @@ library(pak)
 
 pak("lillyschwietzer/csarGeo")
 library(csarGeo)
+```
+
+## 1.2) csarGeo Package Data
+
+The package contains three different default data files. One that contains species occurence data and sampling location coordinate information:
+
+```{r}
+data("species_data")
+head(species_data)
+```
+
+One species classification file:
+
+```{r}
+data("classes_clusters")
+head(classes_clusters)
+```
+
+And one SpatRaster land-use file. The latter is a release of the package and may be loaded using a helper function of the csarGeo package called `load_rasterfile()`:
+
+```{r}
+library(csarGeo)
+library(terra)
+
+# SpatRaster Data
+land_use <- load_rasterfile()
+plot(land_use)
 ```
 
 # 2. Example Analysis
