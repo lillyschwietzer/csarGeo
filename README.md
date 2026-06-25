@@ -4,7 +4,7 @@ csarGeo allows an advances SAR- and cSAR-analysis to assess biodiversity changes
 
 # Table of Contents
 
--   Package Installation
+-   [Package Installation](https://github.com/lillyschwietzer/csarGeo/tree/main#1-installation)
 
 -   Example Analysis
 
