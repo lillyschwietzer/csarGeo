@@ -55,7 +55,7 @@ from a random starting point. Sampling is limited by a convex hull defined by
 
 \item{habitat}{Land-use raster input, SpatRaster or file path to a raster file (e.g. a .tif) containing land-use/land-cover classification of the study area. Categorical values in the raster should correspond to the habitat types defined in \code{habitat_names}.}
 
-\item{habitat_names}{Character vector specifying the names of habitat types corresponding to the values in the \code{habitat} raster, acts as a legend to the land-use raster. E.g. , \code{habitat_names = c("Forest", "Agriculture", "Shrubland")} if raster values 1, 2, 3 represent these classes.}
+\item{habitat_names}{Character vector specifying the names of habitat types corresponding to the values in the \code{habitat} raster, acts as a legend to the land-use raster. E.g. \code{habitat_names = c("Forest", "Agriculture", "Shrubland")} if raster values 1, 2, 3 represent these classes.}
 
 \item{classification}{A data frame defining species classifications with the following structure:
 \itemize{
@@ -68,8 +68,6 @@ from a random starting point. Sampling is limited by a convex hull defined by
 \item{seed}{Optional integer for reproducibility, defaults to \code{NULL}.}
 
 \item{n_runs}{Integer value, number of iterations for \code{method = "circles"}. Each run uses a different random starting point for the expanding circles. For \code{method = "clusters"}, this parameter is ignored as clustering is deterministic. Default value \code{n_runs = 1}.}
-
-\item{transform_to_utm}{transforms geographic coordinates (longitude/latitude) to UTM projection. If data was sampled in polar, equatorial or across very large regions, use an appropriate projection with \code{target_crs} instead of UTM to avoid distortion. Defaults to \code{FALSE}.}
 }
 \value{
 A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
@@ -92,13 +90,12 @@ These squares are then grouped hierarchically using k-means clustering
 based on spatial proximity. The \code{cluster_sizes} vector defines the
 target number of points per cluster at each level.
 
-For a detailed explanation, please colsult the vignette of the csarGeo package.
+For a detailed explanation, please consult the vignette of the csarGeo package.
 }
 \examples{
 \dontrun{
 res <- countryside_sar(
   data = mydata,
-  crs = 3763,
   method = "circles",
   radius = 2000 * 1:10,
   habitat = myraster,

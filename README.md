@@ -109,4 +109,18 @@ groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
 
 Visuals_sar() offers three possible plot options: "map", "sar" and "csar".
 
+```{r}
+visuals_sar(res_cl, plot_type = "map")
+```
+
+```{r}
+visuals_sar(res_cl, plot_type = "sar")
+```
+
+```{r}
+visuals_sar(res_cl, plot_type = "csar")
+```
+
+![](vignettes/images/virid_heat_clusters-01.jpeg)
+
 # 3. References

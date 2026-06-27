@@ -174,7 +174,7 @@ visuals_sar <- function(result,
       # Create heatmap
       ggplot2::ggplot(affinity_long,
                       ggplot2::aes(x = Habitat, y = Species_Group, fill = Affinity)) +
-        ggplot2::geom_tile(color = "white", linewidth = 0.5) +
+        ggplot2::geom_tile(color = "white", linewidth = 1) +
         ggplot2::scale_fill_viridis_c(
           name = "Affinity",
           limits = c(0, 1),
