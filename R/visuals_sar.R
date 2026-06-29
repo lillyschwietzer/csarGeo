@@ -25,10 +25,11 @@
 #' plot_countryside_sar(res, plot_type = "map")
 #' }
 visuals_sar <- function(result,
-                        plot_type = NULL, # "map", "sar", "csar",
+                        plot_type = NULL,
                         # Circles
                         plot_all_runs = TRUE,
                         plot_run_n = NULL,
+                        plot_average = TRUE,
                         # Clusters
                         plot_all_levels = TRUE,
                         plot_level_n = NULL) {
@@ -40,7 +41,6 @@ visuals_sar <- function(result,
 
   method <- result[["method"]]
 
-  # Check if csar exists for heatmap
   has_csar <- !is.null(result[["csar_analysis"]]) &&
     !is.null(result[["csar_analysis"]]$valid) &&
     result[["csar_analysis"]]$valid
@@ -51,15 +51,13 @@ visuals_sar <- function(result,
 
   #------------------------ 1) Helper Functions ---------------------------
 
-  # Circles data preparation
   prepare_circles_for_plot <- function(res_circles, run_number = 1) {
     samples <- res_circles[["runs"]][[run_number]][["samples"]]
     circle_polygons <- lapply(samples, `[[`, "circle")
-
     return(list(
-      points = res_circles[["points_sf"]],
+      points  = res_circles[["points_sf"]],
       circles = circle_polygons,
-      hull = res_circles[["convex_hull"]]
+      hull    = res_circles[["convex_hull"]]
     ))
   }
 
@@ -75,36 +73,67 @@ visuals_sar <- function(result,
       }
     }
 
-    # Circles SAR
-    plot_sar_circles <- function(sar_results, main_title = NULL) {
-      if (is.null(main_title)) main_title <- "Species-Area Relationship (SAR) - Circles"
+    # Circles SAR — handles both single run and average
+    plot_sar_circles <- function(sar_results, main_title = NULL, plot_mode = "single") {
 
-      log_area <- sar_results[["log_area"]]
-      log_sp <- sar_results[["log_sp"]]
+      if (is.null(main_title)) {
+        main_title <- if (plot_mode == "average") "Average SAR - Circles" else "SAR - Circles"
+      }
 
-      intercept <- coef(sar_results[["lm_model"]])[1]
-      slope <- coef(sar_results[["lm_model"]])[2]
-      r_squared <- sar_results[["lm_summary"]]$r.squared
+      if (plot_mode == "average") {
 
-      plot(log_area, log_sp,
-           xlab = "log(Area)",
-           ylab = "log(Species Richness)",
-           main = main_title,
-           pch = 16)
+        all_log_area <- unlist(lapply(result[["runs"]], function(r) {
+          if (r$sar_analysis$valid) r$sar_analysis$log_area else NULL
+        }))
+        all_log_sp <- unlist(lapply(result[["runs"]], function(r) {
+          if (r$sar_analysis$valid) r$sar_analysis$log_sp else NULL
+        }))
 
-      grid()  # Add grid
+        slope     <- sar_results[["avg_slope"]]
+        intercept <- sar_results[["avg_intercept"]]
+        r_squared <- sar_results[["avg_r_squared"]]
+        sd_slope  <- sar_results[["sd_slope"]]
 
-      abline(sar_results[["lm_model"]], col = "red", lwd = 2)
+        plot(all_log_area, all_log_sp,
+             xlab = "log(Area)",
+             ylab = "log(Species Richness)",
+             main = main_title,
+             pch  = 16,
+             col  = adjustcolor("black"))
+        grid()
+        abline(a = intercept, b = slope, col = "red", lwd = 2)
 
-      # Formula, slope, R² as legend in upper left (no box)
-      legend_text <- paste0(
-        "log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x\n",
-        "Slope (z) = ", round(slope, 3), "\n",
-        "R² = ", round(r_squared, 3)
-      )
+        legend_text <- c(
+          paste0("log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x"),
+          paste0("Avg slope (z) = ", round(slope, 3), " \u00b1 ", round(sd_slope, 3)),
+          paste0("Avg R\u00b2 = ", round(r_squared, 3))
+        )
+
+      } else {
+
+        log_area  <- sar_results[["log_area"]]
+        log_sp    <- sar_results[["log_sp"]]
+        intercept <- coef(sar_results[["lm_model"]])[1]
+        slope     <- coef(sar_results[["lm_model"]])[2]
+        r_squared <- sar_results[["lm_summary"]]$r.squared
+
+        plot(log_area, log_sp,
+             xlab = "log(Area)",
+             ylab = "log(Species Richness)",
+             main = main_title,
+             pch  = 16)
+        grid()
+        abline(sar_results[["lm_model"]], col = "red", lwd = 2)
+
+        legend_text <- c(
+          paste0("log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x"),
+          paste0("Slope (z) = ", round(slope, 3)),
+          paste0("R\u00b2 = ", round(r_squared, 3))
+        )
+      }
+
       legend("topleft", legend = legend_text, bty = "n", cex = 0.9)
     }
-
 
   } else { # method == "clusters"
 
@@ -113,18 +142,16 @@ visuals_sar <- function(result,
       if (is.null(main_title)) {
         main_title <- if (!is.null(level_name)) level_name else "Clustering Pattern"
       }
-
       plot(sf::st_geometry(points),
            main = main_title,
            cex = 0.5, pch = 16)
-
       if (length(hulls) > 0) {
         colors <- rainbow(length(hulls))
         for (i in seq_along(hulls)) {
           plot(hulls[[i]],
                border = "black",
-               col = adjustcolor(colors[i], alpha.f = 0.5),
-               add = TRUE)
+               col    = adjustcolor(colors[i], alpha.f = 0.5),
+               add    = TRUE)
         }
       }
     }
@@ -133,64 +160,55 @@ visuals_sar <- function(result,
     plot_sar_clusters <- function(sar_results, main_title = NULL) {
       if (is.null(main_title)) main_title <- "Species-Area Relationship (SAR) - Clusters"
 
-      log_area <- sar_results[["log_area"]]
-      log_sp <- sar_results[["log_sp"]]
-
+      log_area  <- sar_results[["log_area"]]
+      log_sp    <- sar_results[["log_sp"]]
       intercept <- coef(sar_results[["lm_model"]])[1]
-      slope <- coef(sar_results[["lm_model"]])[2]
+      slope     <- coef(sar_results[["lm_model"]])[2]
       r_squared <- sar_results[["lm_summary"]]$r.squared
 
       plot(log_area, log_sp,
            xlab = "log(Area)",
            ylab = "log(Species Richness)",
            main = main_title,
-           pch = 16)
-
-      grid()  # Add grid
-
+           pch  = 16)
+      grid()
       abline(sar_results[["lm_model"]], col = "red", lwd = 2)
 
-      # Formula, slope, R² as legend in upper left (no box)
-      legend_text <- paste0(
-        "log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x\n",
-        "Slope (z) = ", round(slope, 3), "\n",
-        "R² = ", round(r_squared, 3)
+      legend_text <- c(
+        paste0("log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x"),
+        paste0("Slope (z) = ", round(slope, 3)),
+        paste0("R\u00b2 = ", round(r_squared, 3))
       )
+
       legend("topleft", legend = legend_text, bty = "n", cex = 0.9)
     }
 
     # Affinity Heatmap
     plot_heatmap <- function(csar_results) {
-
-      # Extract and convert affinity data
       affinity_list <- csar_results$model$affinity
-      affinity_mat <- do.call(rbind, affinity_list)
-
-      # Convert to long format for ggplot
+      affinity_mat  <- do.call(rbind, affinity_list)
       affinity_long <- reshape2::melt(affinity_mat,
-                                      varnames = c("Species_Group", "Habitat"),
+                                      varnames   = c("Species_Group", "Habitat"),
                                       value.name = "Affinity")
-
-      # Create heatmap
       ggplot2::ggplot(affinity_long,
                       ggplot2::aes(x = Habitat, y = Species_Group, fill = Affinity)) +
-        ggplot2::geom_tile(color = "white", linewidth = 0.5) +
+        ggplot2::geom_tile(color = "white", linewidth = 1) +
         ggplot2::scale_fill_viridis_c(
-          name = "Affinity",
-          limits = c(0, 1),
-          option = "viridis",
+          name      = "Affinity",
+          limits    = c(0, 1),
+          option    = "viridis",
           direction = -1
         ) +
         ggplot2::geom_text(ggplot2::aes(label = round(Affinity, 3)),
                            color = "white", linewidth = 3.5) +
         ggplot2::labs(title = "Species Habitat Affinity",
-                      x = "Habitat Type",
-                      y = "Species Group") +
+                      x     = "Habitat Type",
+                      y     = "Species Group") +
         ggplot2::theme_minimal() +
         ggplot2::theme(
           axis.text.x = ggplot2::element_text(angle = 45, hjust = 1),
-          plot.title = ggplot2::element_text(hjust = 0.5, face = "bold"),
-          panel.grid = ggplot2::element_blank()
+          plot.title  = ggplot2::element_text(hjust = 0.5, face = "bold"),
+          panel.grid  = ggplot2::element_blank()
         )
     }
   }
@@ -205,7 +223,6 @@ visuals_sar <- function(result,
     if (plot_type == "map") {
 
       if (plot_all_runs == TRUE && n_runs > 1) {
-        # Plot all runs in grid
         n_cols <- ceiling(sqrt(n_runs))
         n_rows <- ceiling(n_runs / n_cols)
         par(mfrow = c(n_rows, n_cols), mar = c(2, 2, 3, 2))
@@ -213,32 +230,40 @@ visuals_sar <- function(result,
         for (run in 1:n_runs) {
           circles_data <- prepare_circles_for_plot(result, run)
           plot_spatial_circles(
-            points_sf = circles_data$points,
-            circles = circles_data$circles,
+            points_sf   = circles_data$points,
+            circles     = circles_data$circles,
             convex_hull = circles_data$hull,
-            main_title = paste("Run", run)
+            main_title  = paste("Run", run)
           )
         }
         par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 
       } else {
-        # Plot single run
-        run_to_plot <- if (!is.null(plot_run_n)) plot_run_n else 1
+        run_to_plot  <- if (!is.null(plot_run_n)) plot_run_n else 1
         circles_data <- prepare_circles_for_plot(result, run_to_plot)
         plot_spatial_circles(
-          points_sf = circles_data$points,
-          circles = circles_data$circles,
+          points_sf   = circles_data$points,
+          circles     = circles_data$circles,
           convex_hull = circles_data$hull,
-          main_title = paste("Run", run_to_plot)
+          main_title  = paste("Run", run_to_plot)
         )
       }
     }
 
-    # ----------- SAR PLOT -----------
+    # ----------- SAR Plot -----------
     if (plot_type == "sar") {
 
-      if (n_runs > 1) {
-        # Grid for multiple runs
+      if (n_runs > 1 && plot_average) {
+        # Average SAR plot
+        avg_sar <- result[["avg_sar_results"]]
+        if (avg_sar$valid) {
+          plot_sar_circles(avg_sar, plot_mode = "average")
+        } else {
+          cat("Average SAR not valid.\nMessage:", avg_sar$message, "\n")
+        }
+
+      } else if (plot_all_runs && n_runs > 1) {
+        # Grid of individual runs
         n_cols <- ceiling(sqrt(n_runs))
         n_rows <- ceiling(n_runs / n_cols)
         par(mfrow = c(n_rows, n_cols), mar = c(3, 3, 3, 1))
@@ -246,7 +271,9 @@ visuals_sar <- function(result,
         for (run in 1:n_runs) {
           sar_results <- result[["runs"]][[run]][["sar_analysis"]]
           if (sar_results$valid) {
-            plot_sar_circles(sar_results, main_title = paste("Run", run))
+            plot_sar_circles(sar_results,
+                             main_title = paste("Run", run),
+                             plot_mode  = "single")
           } else {
             plot(1, 1, type = "n", axes = FALSE, xlab = "", ylab = "")
             text(1, 1, paste("Run", run, "\nInvalid"), col = "red", cex = 1.2)
@@ -260,7 +287,9 @@ visuals_sar <- function(result,
         sar_results <- result[["runs"]][[run_to_plot]][["sar_analysis"]]
 
         if (sar_results$valid) {
-          plot_sar_circles(sar_results, main_title = paste("SAR - Run", run_to_plot))
+          plot_sar_circles(sar_results,
+                           main_title = paste("SAR - Run", run_to_plot),
+                           plot_mode  = "single")
         } else {
           cat("SAR analysis not valid for run", run_to_plot, "\n")
           cat("Message:", sar_results$message, "\n")
@@ -270,16 +299,14 @@ visuals_sar <- function(result,
 
   } else { # method == "clusters"
 
-    # Extract data
     points_combined <- do.call(rbind, result[["samples"]][["size_1"]][["points"]])
     clusters_chulls <- result[["clusters_chulls"]]
-    n_levels <- length(clusters_chulls)
+    n_levels        <- length(clusters_chulls)
 
-    # ----------- MAP PLOT -----------
+    # ----------- Map Plot -----------
     if (plot_type == "map") {
 
       if (plot_all_levels == TRUE && n_levels > 1) {
-        # Plot all levels in grid
         n_cols <- ceiling(sqrt(n_levels))
         n_rows <- ceiling(n_levels / n_cols)
         par(mfrow = c(n_rows, n_cols), mar = c(2, 2, 3, 2))
@@ -287,29 +314,27 @@ visuals_sar <- function(result,
         level_names <- names(clusters_chulls)
         for (level in 1:n_levels) {
           plot_spatial_clusters(
-            points = points_combined,
-            hulls = clusters_chulls[[level]],
-            level_name = level_names[level]
+            points     = points_combined,
+            hulls      = clusters_chulls[[level]],
+            level_name = gsub("size_", "Size ", level_names[level])
           )
         }
         par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 
       } else {
-        # Plot single level
         level_to_plot <- if (!is.null(plot_level_n)) plot_level_n else 1
-        level_names <- names(clusters_chulls)
+        level_names   <- names(clusters_chulls)
         plot_spatial_clusters(
-          points = points_combined,
-          hulls = clusters_chulls[[level_to_plot]],
-          level_name = level_names[level_to_plot]
+          points     = points_combined,
+          hulls      = clusters_chulls[[level_to_plot]],
+          level_name = gsub("size_", "Size ", level_names[level_to_plot])
         )
       }
     }
 
-    # ----------- SAR PLOT -----------
+    # ----------- SAR Plot -----------
     if (plot_type == "sar") {
       sar_results <- result[["sar_analysis"]]
-
       if (sar_results$valid) {
         plot_sar_clusters(sar_results)
       } else {
@@ -318,7 +343,7 @@ visuals_sar <- function(result,
       }
     }
 
-    # ----------- CSAR HEATMAP -----------
+    # ----------- CSAR Heatmap -----------
     if (plot_type == "csar") {
       if (has_csar) {
         print(plot_heatmap(result[["csar_analysis"]]))
@@ -328,6 +353,5 @@ visuals_sar <- function(result,
     }
   }
 
-  # Return invisible
   invisible(result)
 }

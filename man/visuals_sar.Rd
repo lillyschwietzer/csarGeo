@@ -9,6 +9,7 @@ visuals_sar(
   plot_type = NULL,
   plot_all_runs = TRUE,
   plot_run_n = NULL,
+  plot_average = TRUE,
   plot_all_levels = TRUE,
   plot_level_n = NULL
 )
