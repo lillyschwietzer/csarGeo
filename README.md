@@ -78,8 +78,8 @@ library(csarGeo)
 library(terra)
 
 # SpatRaster Data
-land_use <- load_rasterfile()
-plot(land_use)
+land_use <- load_lu1995()
+terra::plot(land_use)
 ```
 
 ![](vignettes/images/raster_file_ex.jpeg)
