@@ -16,15 +16,15 @@
 #' @examples
 #' \dontrun{
 #' # Load the raster
-#' lu1995 <- load_lu1995()
+#' land_use95 <- load_lu1995()
 #'
 #' # Plot the raster
-#' terra::plot(lu1995, main = "Land Use 1995")
+#' terra::plot(land_use95)
 #'
 #' # Use in analysis
 #' res <- countryside_sar(
 #'   data = species_data,
-#'   habitat = lu1995,
+#'   habitat = land_use95,
 #'   habitat_names = c("Forest", "Agriculture", "Shrubland"),
 #'   method = "clusters"
 #' )
