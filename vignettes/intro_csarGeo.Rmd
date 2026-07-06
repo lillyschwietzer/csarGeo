@@ -16,7 +16,7 @@ knitr::opts_chunk$set(
   echo = TRUE,
   fig.width = 7,
   fig.height = 5,
-  out.width = "50%",
+  out.width = "90%",
   fig.align = "left",
   warning = FALSE,
   message = FALSE
@@ -102,7 +102,7 @@ The parameters described in 1) are non-optional and have to be defined by the us
 A full analysis example is provided in 5.1.
 
 | Parameter | Description | Necessary |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | data | binary species data and sampling location latitude and longitude | Non-optional |
 | method | defines "circles" as sampling method | Non-optional |
 | radius | Defines the radius size as well as the total amount of circles for method: "Circles" | Non-optional |
@@ -128,7 +128,7 @@ Aggregation
 For this analysis pathway, countryside_SAR offers and needs the following parameters:
 
 | Parameter | Description | Necessary |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | data | binary species data and sampling location latitude and longitude | Non-optional |
 | method | defines "clusters" as sampling method | Non-optional |
 | square_size | The size of the square buffer for each sampling point for method "Clusters". | Non-optional |
@@ -203,7 +203,7 @@ The visuals_sar function does not add any further analysis and only serves as a 
 Generally, there are three possible plots that can be generated: a map, a SAR plot and a cSAR habitat affinity heatmap.
 
 | Parameter | Description | Method |
-|----|----|----|
+|------------------------|------------------------|------------------------|
 | result | Output from countryside_sar | Both |
 | plot_type | The type of plot to be generated: "map" of all sampling circles or of all hierarchical levels, "sar" for individual or average SAR analysis, "csar" for a habitat affinity heatmap of method clusters | Both |
 | plot_all_runs | Plot all iterations into one grid, defaults to TRUE | Circles |
