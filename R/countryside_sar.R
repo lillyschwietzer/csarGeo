@@ -53,7 +53,6 @@
 #'   }
 #' @param groups Character vector specifying which columns from \code{classification} to use as species groups. If \code{groups = NULL} (default), all group columns are used for analysis.
 #' @param seed Optional integer for reproducibility, defaults to \code{NULL}.
-#' @param transform_to_utm transforms geographic coordinates (longitude/latitude) to UTM projection. If data was sampled in polar, equatorial or across very large regions, use an appropriate projection with \code{target_crs} instead of UTM to avoid distortion. Defaults to \code{FALSE}.
 #' @param n_runs Integer value, number of iterations for \code{method = "circles"}. Each run uses a different random starting point for the expanding circles. For \code{method = "clusters"}, this parameter is ignored as clustering is deterministic. Default value \code{n_runs = 1}.
 #'
 #' @return A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
@@ -63,7 +62,6 @@
 #' \dontrun{
 #' res <- countryside_sar(
 #'   data = mydata,
-#'   crs = 3763,
 #'   method = "circles",
 #'   radius = 2000 * 1:10,
 #'   habitat = myraster,
@@ -90,7 +88,6 @@ countryside_sar <- function(
     classification = NULL,
     groups = NULL,
     seed = NULL,
-    # Coordinate transformation options
     n_runs = 1
 ) {
 

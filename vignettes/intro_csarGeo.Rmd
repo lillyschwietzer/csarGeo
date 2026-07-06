@@ -7,6 +7,31 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
+```{r setup, include=FALSE}
+library(csarGeo)
+library(terra)
+library(ggplot2)
+
+knitr::opts_chunk$set(
+  echo = TRUE,
+  fig.width = 7,
+  fig.height = 5,
+  out.width = "50%",
+  fig.align = "left",
+  warning = FALSE,
+  message = FALSE
+)
+```
+
+```{css, echo=FALSE}
+img {
+  max-width: 90%;
+  height: auto;
+  display: block;
+  margin: 0;
+}
+```
+
 This vignette offers a detailed introduction to the **csarGeo** package. Its aim is to familiarize you with the necessary structure of the input data and to provide an overview of the workflow of both the countryside_sar() and the visuals_sar() function. Further it will explain the influence of your data, specifically of the evenness of sampling locations, on the accuracy of the analysis function countryside_sar() to ensure optimal utilization.
 
 ## Prior To Using The Package
@@ -26,22 +51,21 @@ Due to its
 The **species data table** needs a location ID as the first column, the longitude and latitude values as its second and third columns and binary presence-absence species data from column 4 and onward (s. example using default data of csarGeo). The function receives this table as the parameter "data".
 
 ```{r}
-#data("species_data")
-#head(species_data)
+data("species_data")
+head(species_data)
 ```
-
-![Table 1: Species Data Example](images/species_data_input.jpg){width="699"}
 
 The function further requires a **spatial raster file** of the sampling locations for the parameter "habitat" (s. figure 2) and finally a **classification file** for the parameter "classification" (s. figure 3). The classification file should contain the species name as the first column and a binary classification to habitat affinities from column 2 and onward (s. figure 3). It is not necessary to mind upper- and lowercase letters for the species names as the function defaults all names to lowercase to account for formatting errors.
 
-![Figure 2: Raster File Example](images/raster_file_ex.jpeg)
-
 ```{r}
-#data("classes_clusters") # example species classification 
-#head(classes_clusters)
+land_use <- load_landuse()
+plot(land_use)
 ```
 
-![Table 2: Classification File Example](images/class_input.jpg){width="583"}
+```{r}
+data("classes_clusters") 
+head(classes_clusters)
+```
 
 If you choose to import a custom hull using 'custom_hull' for the analysis area, make sure both the raster file and the hull use the same coordinate reference system (CRS).
 
@@ -78,7 +102,7 @@ The parameters described in 1) are non-optional and have to be defined by the us
 A full analysis example is provided in 5.1.
 
 | Parameter | Description | Necessary |
-|-----------------|---------------------------------------|-----------------|
+|----|----|----|
 | data | binary species data and sampling location latitude and longitude | Non-optional |
 | method | defines "circles" as sampling method | Non-optional |
 | radius | Defines the radius size as well as the total amount of circles for method: "Circles" | Non-optional |
@@ -104,7 +128,7 @@ Aggregation
 For this analysis pathway, countryside_SAR offers and needs the following parameters:
 
 | Parameter | Description | Necessary |
-|---------------|-------------------------------------------|---------------|
+|----|----|----|
 | data | binary species data and sampling location latitude and longitude | Non-optional |
 | method | defines "clusters" as sampling method | Non-optional |
 | square_size | The size of the square buffer for each sampling point for method "Clusters". | Non-optional |
@@ -140,15 +164,21 @@ $$
 S_i(A_1, A_2, \ldots, A_n) = c_i \left( \sum_{j=1}^{n} h_{ij} A_j \right)^z
 $$
 
-where *n* is the number of habitat types, *h* ~*ij*~ is the affinity of the species group *i* to habitat *j*, *A* ~*j*~the area of habitat *j*, and *c* ~*i*~ measures the relative local abundance of each species group *i* (Martins and Pereira, 2017)
+where *n* is the number of habitat types,*h~ij~* is the affinity of the species group *i* to habitat *j*, *Aj* the area of habitat *j*, and *c~i~* measures the relative local abundance of each species group *i* (Martins and Pereira, 2017)
 
 As with the classic SAR, S is the species richness of the group and z the species accumulation rate (slope).
 
 The detailed difference between both SAR models is described in *Matthews, sars package vignette*,
 
+The cSAR analysis then fits the following non-linear regression model to the sampled data of each species group for each habitat to determine the affinities of all species groups to all available habitats.
+
+$$
+S \sim (h_1 \times A_1 + h_2 \times A_2 + h_3 \times A_3)^z
+$$
+
 # 3. Output
 
-The output of both methods is almost identical. Both are a large list that includes a **results table**, which holds the aggregated species data for either each circle or each cluster, the **results of the standard SAR and cSAR analysis** with the corresponding model data, a list with the **samples** of each sampling occurrence, both binary species data for each level as well as the polygon used to sample the data of this particular level (either a circle or the polygon around a cluster) and a list with the **sf transformed input species data** (points_sf for "circles" and squares_sf for "clusters") with the added coordinate column of each sampling location (s. 2.1 General Workflow). As for "circles" the output includes information about the polygon hull that defines the sampling area within **convex_hull**, "clusters" on the other hand holds information about the polygon around the clusters of each level in **clusters_chulls**.
+The output of an analysis using 'circles' is almost identical to the 'clusters' analysis. Both are large lists containing information about the method used, a **results table**, which holds the aggregated species and area data (per habitat and group as well as total sum) for either each circle or each cluster, the **results of the standard SAR and cSAR analysis** with the corresponding model data, a list with the **samples** of each sampling occurrence, both binary species data for each level as well as the polygon used to sample the data of this particular level (either a circle or the polygon around a cluster) and a list with the **sf transformed input species data** (points_sf for "circles" and squares_sf for "clusters") with the added coordinate column of each sampling location (s. 2.1 General Workflow). As for "circles" the output includes information about the polygon hull that defines the sampling area within **convex_hull**, "clusters" on the other hand holds information about the polygon around the clusters of each level in **clusters_chulls**.
 
 To manually inspect both results table structures, please consult the provided examples in 5.
 
@@ -170,32 +200,47 @@ Aside from the columns for the area of each habitat type, two columns relate to 
 
 The visuals_sar function does not add any further analysis and only serves as a quick way to plot the results of the countryside_sar function. As such it only includes the absolute minimum of possible plot modifications of both a map for the sampling layout as well as the results of the SAR analysis. The user can of course always plot these results using their own methods.
 
+Generally, there are three possible plots that can be generated: a map, a SAR plot and a cSAR habitat affinity heatmap.
+
+| Parameter | Description | Method |
+|----|----|----|
+| result | Output from countryside_sar | Both |
+| plot_type | The type of plot to be generated: "map" of all sampling circles or of all hierarchical levels, "sar" for individual or average SAR analysis, "csar" for a habitat affinity heatmap of method clusters | Both |
+| plot_all_runs | Plot all iterations into one grid, defaults to TRUE | Circles |
+| plot_run_n | Plot only one specific iteration, defaults to NULL | Circles |
+| plot_all_levels | Plot all hierarchical levels into one grid, defaults to TRUE | Clusters |
+| plot_level_n | Plot only one specific level, defaults to NULL | Clusters |
+
 ## 4.1 Map Plot
 
 ### 4.1.1 Circles
 
 ![Figure 5: Example Plot of 6 Circles Runs](images/circles_map.jpeg)
 
-Using
-
 ```{r}
-#visuals_sar(res, plot_type = "map")
+# visuals_sar(res, plot_type = "map")
 ```
 
-a grid of all sampling maps with the corresponding run number can be created. To plot only one specific run, use:
+The line above creates a map of each individual iteration of method 'circles' with the corresponding run number. To plot only one specific run, in the example run number 3, use:
 
 ```{r}
-#visuals_sar(res, plot_type = "map", plot_all_runs = FALSE, plot_run_n = 3)
+# visuals_sar(res, plot_type = "map", plot_all_runs = FALSE, plot_run_n = 3)
 ```
 
 ### 4.1.2 Clusters
 
-![Figure 6: Example Plot of Clusters with 5 levels](images/Rplot03-01.jpeg)
+![](images/clipboard-517862893.png)
 
 In the same manner as for a result of method circles, a map that displays a plot for each hierarchical level of a clusters analysis may be called using:
 
 ```{r}
-#visuals_sar(res, plot_type = "map")
+# visuals_sar(res, plot_type = "map")
+```
+
+Or a map of level 4 (size 64) only using:
+
+```{r}
+# visuals_sar(res, plot_type = "map", plot_all_levels = FALSE, plot_level_n = 64)
 ```
 
 ## 4.2 SAR Plot
@@ -204,21 +249,37 @@ In the same manner as for a result of method circles, a map that displays a plot
 
 Visuals_sar offers two different ways to plot the results of the classic SAR model: either the plots of each individual run or the average SAR result.
 
+```{r}
+# visuals_sar(res, plot_type = "sar")
+```
+
 ![Figure 7: Base SAR Plot Method 'Circles' for n_runs = 1](images/sar_circles_singlerun.jpeg){width="620"}
+
+If countryside_sar was used for only one iteration, the visuals_sar output will be a single plot as in figure X, given multiple iterations it will create a grid of all SAR results.
 
 ![Figure 8: Base SAR Plot Method 'Circles' for n_runs = 6](images/Rplot02.jpeg)
 
-![Figure 9: Base SAR Plot Method 'Circles' for average of n_runs = 6](images/Rplot01.jpeg)
+To plot the average SAR result of multiple iterations, use:
 
-## 4.2.2 Base SAR Clusters
+![Figure 9: Base SAR Plot Method 'Circles' for average of n_runs = 6](images/Rplotavg-01.jpeg)
+
+### 4.2.2 Base SAR Clusters
 
 ![Figure 10: Base SAR Plot Method 'Clusters'](images/csarclusters.jpeg)
 
-### 4.2.3 Countryside SAR
+For method clusters only one possible SAR plot
+
+## 4.2.3 Countryside SAR
+
+The affinity data of the cSAR analysis are visualized using a heatmap. It displays the affinities of the species groups to the different habitat types, 1 being a high affinity, 0 meaning no affinity towards the habitat type at all.
+
+```{r}
+# visuals_sar(test_clusters, plot_type = "csar")
+```
 
 ![](images/csar_aff.jpeg)
 
-The affinity data of the cSAR analysis are visualized using a heatmap. It displays the affinities of the species groups to the different habitat types, 1 being a high affinity, 0 meaning no affinity towards the habitat type at all. The full model summary can be called using:
+The full model summary can be called using:
 
 ```{r}
 #result[["csar_analysis"]][["model"]]
@@ -226,78 +287,73 @@ The affinity data of the cSAR analysis are visualized using a heatmap. It displa
 
 # 5. Examples: Full Analysis
 
+To familiarize you with the workflow of csarGeo, this section contains a full example analysis for either sampling method
+
 The csarGeo package contains three files that may be used to run the analysis examples of 5.1 and 5.2.
 
 ```{r}
-library(csarGeo)
 
-data("species_data")
-data("classes_clusters")
-
-land_use <- load_lu1995()
 ```
 
 ## 5.1 Circles
 
 ```{r}
+# Load all example data files
+data("species_data")
+data("classes_clusters")
+land_use <- load_landuse()
+
+# Circles analysis using countryside_sar
+# create 10 sampling circles of 2000 spatial units (here m) distance
 res_ci <- countryside_sar(
-  data = data,
+  data = species_data,
   method = "circles",
   radius = 2000 * 1:10,
-  habitat = lu1995,
+  habitat = land_use,
   habitat_names = c("Forest", "Agriculture", "Shrubland"),
-  classification = classif,
-  groups = c("Forest", "Grassland", "generalists"),
+  classification = classes_clusters,
+  groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp"),
   n_runs = 6
 )
+
+# Visualization using visuals_sar
+# Map plot
+visuals_sar(res_ci, plot_type = "map")
+
+# SAR
+visuals_sar(res_ci, plot_type = "sar")
 ```
 
-For an example run with 6 iterations, 10 circles produced
+## 5.2 Clusters
 
 ```{r}
-visuals_sar(res, plot_type = "map")
-```
+# Load all example data files
+data("species_data")
+data("classes_clusters")
+land_use <- load_landuse()
 
-To create a grid of maps of all runs
-
-```{r}
-visuals_sar(res, plot_type = "sar", plot_average = FALSE) 
-```
-
-Plot grid of all SAR results
-
-```{r}
-visuals_sar(res, plot_type = "sar") 
-```
-
-Plot average SAR result
-
-## 5.1 Clusters
-
-```{r}
+# Clusters analysis using countryside_sar
 res_cl <- countryside_sar(
-  data = data,
+  data = species_data,
   method = "clusters",
   square_size = 2000,
   cluster_sizes = c(1, 4, 16, 64, 256),
-  habitat = lu1995,
+  habitat = land_use,
   habitat_names = c("Forest", "Agriculture", "Shrubland"),
   classification = classes_clusters,
   groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
 )
+
+# Visualization using visuals_sar
+# Map plot
+visuals_sar(res_cl, plot_type = "map")
+
+# SAR
+visuals_sar(res_cl, plot_type = "sar")
+
+# cSAR - habitat affinities
+visuals_sar(res_cl, plot_type = "csar")
 ```
-
-```{r}
-visuals_sar(test_clusters, plot_type = "map")
-```
-
-To plot a grid of all 5 hierarchical levels
-
-```{r}
-visuals_sar(test_clusters, plot_type = "csar")
-```
-
-Plot heatmap of habitat affinities
 
 # 6. References
 
@@ -310,5 +366,3 @@ Matthews, T. J., and F. Rigal. 2021. Thresholds and the species–area relations
 Martins, I., Pereira, H.M. Improving extinction projections across scales and habitats using the countryside species-area relationship. *Sci Rep* **7**, 12899 (2017). <https://doi.org/10.1038/s41598-017-13059-y>
 
 Inês S. Martins u. a., „Alternative pathways to a sustainable future lead to contrasting biodiversity responses“, Global Ecology and Conservation 22 (Juni 2020): e01028, <https://doi.org/10.1016/j.gecco.2020.e01028>.
-
-at least R 4.1.0 to use package

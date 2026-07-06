@@ -92,11 +92,10 @@ visuals_sar <- function(result,
            main = main_title,
            pch = 16)
 
-      grid()  # Add grid
+      grid()
 
       abline(sar_results[["lm_model"]], col = "red", lwd = 2)
 
-      # Formula, slope, R² as legend in upper left (no box)
       legend_text <- paste0(
         "log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x\n",
         "Slope (z) = ", round(slope, 3), "\n",
@@ -146,11 +145,10 @@ visuals_sar <- function(result,
            main = main_title,
            pch = 16)
 
-      grid()  # Add grid
+      grid()
 
       abline(sar_results[["lm_model"]], col = "red", lwd = 2)
 
-      # Formula, slope, R² as legend in upper left (no box)
       legend_text <- paste0(
         "log(S) = ", round(intercept, 3), " + ", round(slope, 3), "x\n",
         "Slope (z) = ", round(slope, 3), "\n",
@@ -171,18 +169,19 @@ visuals_sar <- function(result,
                                       varnames = c("Species_Group", "Habitat"),
                                       value.name = "Affinity")
 
-      # Create heatmap
+      # Create heatmap - NO LEGEND
       ggplot2::ggplot(affinity_long,
                       ggplot2::aes(x = Habitat, y = Species_Group, fill = Affinity)) +
         ggplot2::geom_tile(color = "white", linewidth = 0.5) +
         ggplot2::scale_fill_viridis_c(
-          name = "Affinity",
+          name = NULL,           # Removes legend title
           limits = c(0, 1),
           option = "viridis",
-          direction = -1
+          direction = -1,
+          guide = "none"         # Removes the entire legend
         ) +
         ggplot2::geom_text(ggplot2::aes(label = round(Affinity, 3)),
-                           color = "white", linewidth = 3.5) +
+                           color = "black", size = 5) +
         ggplot2::labs(title = "Species Habitat Affinity",
                       x = "Habitat Type",
                       y = "Species Group") +
@@ -274,6 +273,7 @@ visuals_sar <- function(result,
     points_combined <- do.call(rbind, result[["samples"]][["size_1"]][["points"]])
     clusters_chulls <- result[["clusters_chulls"]]
     n_levels <- length(clusters_chulls)
+    level_names <- names(clusters_chulls)
 
     # ----------- MAP PLOT -----------
     if (plot_type == "map") {
@@ -284,24 +284,42 @@ visuals_sar <- function(result,
         n_rows <- ceiling(n_levels / n_cols)
         par(mfrow = c(n_rows, n_cols), mar = c(2, 2, 3, 2))
 
-        level_names <- names(clusters_chulls)
         for (level in 1:n_levels) {
+          # Format the level name for display
+          display_name <- gsub("size_", "Size ", level_names[level])
+
           plot_spatial_clusters(
             points = points_combined,
             hulls = clusters_chulls[[level]],
-            level_name = level_names[level]
+            level_name = display_name
           )
         }
         par(mfrow = c(1, 1), mar = c(5, 4, 4, 2))
 
       } else {
         # Plot single level
-        level_to_plot <- if (!is.null(plot_level_n)) plot_level_n else 1
-        level_names <- names(clusters_chulls)
+        if (!is.null(plot_level_n)) {
+          # User specified a cluster size (e.g., 64)
+          target_name <- paste0("size_", plot_level_n)
+          level_idx <- which(level_names == target_name)
+
+          if (length(level_idx) == 0) {
+            stop("Cluster size '", plot_level_n, "' not found. Available sizes: ",
+                 paste(gsub("size_", "", level_names), collapse = ", "))
+          }
+          level_to_plot <- level_idx
+        } else {
+          # Default to first level
+          level_to_plot <- 1
+        }
+
+        # Format the level name for display
+        display_name <- gsub("size_", "Size ", level_names[level_to_plot])
+
         plot_spatial_clusters(
           points = points_combined,
           hulls = clusters_chulls[[level_to_plot]],
-          level_name = level_names[level_to_plot]
+          level_name = display_name
         )
       }
     }

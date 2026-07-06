@@ -16,7 +16,7 @@
 #' @examples
 #' \dontrun{
 #' # Load the raster
-#' land_use95 <- load_lu1995()
+#' land_use95 <- load_landuse()
 #'
 #' # Plot the raster
 #' terra::plot(land_use95)
@@ -31,7 +31,7 @@
 #' }
 #'
 #' @export
-load_lu1995 <- function() {
+load_landuse <- function() {
   file_path <- system.file("extdata", "coa95_raster_20.tif", package = "csarGeo")
   if (file_path == "") {
     stop("Raster file not found. Please re-install the package.")
