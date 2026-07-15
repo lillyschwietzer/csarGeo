@@ -92,6 +92,8 @@ library(devtools)
 devtools::install_github("lillyschwietzer/csarGeo", 
                          build_vignettes = TRUE,
                          force = TRUE)
+
+vignette("intro_csarGeo")
 ```
 
 # 2. Example Analysis
