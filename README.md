@@ -84,6 +84,16 @@ terra::plot(land_use)
 
 ![](vignettes/images/raster_file_ex.jpeg)
 
+## 1.3) csarGeo Vignette
+
+```{r}
+library(devtools)
+
+devtools::install_github("lillyschwietzer/csarGeo", 
+                         build_vignettes = TRUE,
+                         force = TRUE)
+```
+
 # 2. Example Analysis
 
 The example below only contains information regarding the the analysis method "clusters", which is one of two possible pathways of the csarGeo package. For a detailed explanation as well as examples of both pathways, please consult the vignette.

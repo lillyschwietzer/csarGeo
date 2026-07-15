@@ -100,14 +100,14 @@ countryside_sar <- function(
   if (!is.null(seed)) set.seed(seed)
 
   # Determine CRS: from parameter or from raster
-    if (is.null(habitat)) {
-      stop("Habitat raster with CRS information must be provided.")
-    }
-    # Extract CRS from raster
-    crs <- terra::crs(habitat)
-    if (is.na(crs) || crs == "") {
-      stop("Raster has no CRS information.")
-    }
+  if (is.null(habitat)) {
+    stop("Habitat raster with CRS information must be provided.")
+  }
+  # Extract CRS from raster
+  crs <- terra::crs(habitat)
+  if (is.na(crs) || crs == "") {
+    stop("Raster has no CRS information.")
+  }
 
   #---------------------------- 1. Input validation ----------------------------
   method <- match.arg(method)
@@ -198,137 +198,137 @@ countryside_sar <- function(
 
   if (method == "circles")
   {
-  # Helper "circles"
-  filter_points_in_expanding_circles <- function(points_sf,
-                                                 radius_vector,
-                                                 convex_hull,
-                                                 break_threshold) {
-    # Randomly selected point of sampling start
-    selected_point <- points_sf[sample(1:nrow(points_sf), 1), ]
-    points_within_circles <- list()
+    # Helper "circles"
+    filter_points_in_expanding_circles <- function(points_sf,
+                                                   radius_vector,
+                                                   convex_hull,
+                                                   break_threshold) {
+      # Randomly selected point of sampling start
+      selected_point <- points_sf[sample(1:nrow(points_sf), 1), ]
+      points_within_circles <- list()
 
-    # Loop through the radius_vector
-    for (radius in radius_vector) {
-      circle <- sf::st_geometry(sf::st_buffer(selected_point, dist = radius))
+      # Loop through the radius_vector
+      for (radius in radius_vector) {
+        circle <- sf::st_geometry(sf::st_buffer(selected_point, dist = radius))
 
-      # break protocol
-      intersection <- sf::st_intersection(circle, convex_hull)
-      circle_area <- as.numeric(sf::st_area(circle))
-      intersection_area <- as.numeric(sf::st_area(intersection))
+        # break protocol
+        intersection <- sf::st_intersection(circle, convex_hull)
+        circle_area <- as.numeric(sf::st_area(circle))
+        intersection_area <- as.numeric(sf::st_area(intersection))
 
-      if (intersection_area / circle_area < break_threshold) {
-        break
+        if (intersection_area / circle_area < break_threshold) {
+          break
+        }
+
+        points_in_circle <- points_sf[sf::st_intersects(points_sf, circle, sparse = FALSE), ]
+        points_within_circles[[paste0("radius_", radius)]] <-
+          list(points = points_in_circle, circle = circle)
       }
-
-      points_in_circle <- points_sf[sf::st_intersects(points_sf, circle, sparse = FALSE), ]
-      points_within_circles[[paste0("radius_", radius)]] <-
-        list(points = points_in_circle, circle = circle)
+      return(points_within_circles)
     }
-    return(points_within_circles)
-  }
 
   } else
-    {
-
-  create_squares <- function(points_sf,
-                             width)
   {
-    if (!inherits(points_sf, "sf") || !inherits(sf::st_geometry(points_sf), "sfc_POINT"))
-      stop("Input must be an sf object with point geometries.")
-    # Calculate half-width (to shift the square corners)
-    half_width <- width / 2
-    squares_sf <- sf::st_as_sf(sf::st_buffer(points_sf, dist = half_width, endCapStyle = "SQUARE"))
-    return(squares_sf) # squares centered on the sampling points
-  }
 
-
-  filter_points_in_clusters <- function(points_sf,
-                                        squares_sf,
-                                        cluster_size_vector)
-  {
-    npoints <- nrow(points_sf)
-    n_clusters_vector <- npoints %/% cluster_size_vector
-    n_clusters_vector[n_clusters_vector == 0] <- 1  # when whole landscape, npoints < cluster_size
-
-    # result list
-    points_within_clusters <- list()
-
-    for (i in seq_along(cluster_size_vector))
+    create_squares <- function(points_sf,
+                               width)
     {
-      n_clusters <- n_clusters_vector[i]
-      size_val <- cluster_size_vector[i] # cluster size index for results
+      if (!inherits(points_sf, "sf") || !inherits(sf::st_geometry(points_sf), "sfc_POINT"))
+        stop("Input must be an sf object with point geometries.")
+      # Calculate half-width (to shift the square corners)
+      half_width <- width / 2
+      squares_sf <- sf::st_as_sf(sf::st_buffer(points_sf, dist = half_width, endCapStyle = "SQUARE"))
+      return(squares_sf) # squares centered on the sampling points
+    }
 
-      if (n_clusters == npoints) # as many points as clusters
+
+    filter_points_in_clusters <- function(points_sf,
+                                          squares_sf,
+                                          cluster_size_vector)
+    {
+      npoints <- nrow(points_sf)
+      n_clusters_vector <- npoints %/% cluster_size_vector
+      n_clusters_vector[n_clusters_vector == 0] <- 1  # when whole landscape, npoints < cluster_size
+
+      # result list
+      points_within_clusters <- list()
+
+      for (i in seq_along(cluster_size_vector))
       {
-        points_in_clusters <- split(points_sf, 1:npoints)
-        clusters_convex_hulls <- split(sf::st_geometry(squares_sf), 1:npoints)
+        n_clusters <- n_clusters_vector[i]
+        size_val <- cluster_size_vector[i] # cluster size index for results
 
-      } else # less points than clusters
-      {
-        # proximity-based k-means clustering
-        coords <- sf::st_coordinates(points_sf)
-        kmeans_result <- kmeans(coords, centers = n_clusters, iter.max = 100, nstart = 25)
-        cluster_assignments <- kmeans_result$cluster
-
-        points_in_clusters <- list()
-        squares_in_clusters <- list()
-
-        for (c in 1:n_clusters)
+        if (n_clusters == npoints) # as many points as clusters
         {
-          cluster_idx <- which(cluster_assignments == c)
-          points_in_clusters[[c]] <- points_sf[cluster_idx, ]
-          squares_in_clusters[[c]] <- squares_sf[cluster_idx, ]
-        }
+          points_in_clusters <- split(points_sf, 1:npoints)
+          clusters_convex_hulls <- split(sf::st_geometry(squares_sf), 1:npoints)
 
-        clusters_convex_hulls <- list()
-        for (j in seq_along(squares_in_clusters))
+        } else # less points than clusters
         {
-          n_sq <- nrow(squares_in_clusters[[j]])
+          # proximity-based k-means clustering
+          coords <- sf::st_coordinates(points_sf)
+          kmeans_result <- kmeans(coords, centers = n_clusters, iter.max = 100, nstart = 25)
+          cluster_assignments <- kmeans_result$cluster
 
-          if (n_sq == 0)
+          points_in_clusters <- list()
+          squares_in_clusters <- list()
+
+          for (c in 1:n_clusters)
           {
-            warning("Cluster ", j, " has zero squares – skipping")
-            next
+            cluster_idx <- which(cluster_assignments == c)
+            points_in_clusters[[c]] <- points_sf[cluster_idx, ]
+            squares_in_clusters[[c]] <- squares_sf[cluster_idx, ]
           }
 
-          merged <- sf::st_union(squares_in_clusters[[j]])
-          hull <- sf::st_convex_hull(merged)
-          clusters_convex_hulls[[j]] <- hull
+          clusters_convex_hulls <- list()
+          for (j in seq_along(squares_in_clusters))
+          {
+            n_sq <- nrow(squares_in_clusters[[j]])
+
+            if (n_sq == 0)
+            {
+              warning("Cluster ", j, " has zero squares – skipping")
+              next
+            }
+
+            merged <- sf::st_union(squares_in_clusters[[j]])
+            hull <- sf::st_convex_hull(merged)
+            clusters_convex_hulls[[j]] <- hull
+          }
         }
+
+        level_name <- paste0("size_", size_val)
+        points_within_clusters[[level_name]] <-
+          list(points = points_in_clusters, chulls = clusters_convex_hulls)
       }
 
-      level_name <- paste0("size_", size_val)
-      points_within_clusters[[level_name]] <-
-        list(points = points_in_clusters, chulls = clusters_convex_hulls)
+      return(points_within_clusters)
     }
 
-    return(points_within_clusters)
-  }
+    extract_species_positions <- function(species_habitat_matrix,
+                                          species_site_matrix) {
+      # Get habitat names
+      habitat_names <- colnames(species_habitat_matrix[,-1])
 
-  extract_species_positions <- function(species_habitat_matrix,
-                                        species_site_matrix) {
-    # Get habitat names
-    habitat_names <- colnames(species_habitat_matrix[,-1])
+      # Initialize a list to store species positions for each habitat
+      habitat_positions <- list()
 
-    # Initialize a list to store species positions for each habitat
-    habitat_positions <- list()
+      # Loop through each habitat
+      for (habitat in habitat_names) {
+        # Get species associated with this habitat
+        species_in_habitat <-
+          rownames(species_habitat_matrix)[species_habitat_matrix[, habitat] == 1] # returns TRUE or FALSE
 
-    # Loop through each habitat
-    for (habitat in habitat_names) {
-      # Get species associated with this habitat
-      species_in_habitat <-
-        rownames(species_habitat_matrix)[species_habitat_matrix[, habitat] == 1] # returns TRUE or FALSE
+        # Find positions (indices) of these species in the species-site matrix
+        species_positions <- which(rownames(species_site_matrix) %in% species_in_habitat)
 
-      # Find positions (indices) of these species in the species-site matrix
-      species_positions <- which(rownames(species_site_matrix) %in% species_in_habitat)
+        # Store results in the list
+        habitat_positions[[habitat]] <- species_positions
+      }
 
-      # Store results in the list
-      habitat_positions[[habitat]] <- species_positions
+      return(habitat_positions)
     }
-
-    return(habitat_positions)
   }
- }
 
   summarize_samples <- function(samples,
                                 polygons,
