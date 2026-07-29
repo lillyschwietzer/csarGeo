@@ -95,14 +95,13 @@ For a detailed explanation, please colsult the vignette of the csarGeo package.
 \examples{
 \dontrun{
 res <- countryside_sar(
-  data = mydata,
+  data = species_data,
   method = "circles",
   radius = 2000 * 1:10,
-  habitat = myraster,
+  habitat = land_use,
   habitat_names = c("Forest", "Agriculture", "Shrubland"),
-  classification = myclassif,
+  classification = classes_clusters,
   groups = "Forest",
-  seed = 123
 )
 }
 }

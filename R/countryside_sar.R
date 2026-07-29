@@ -61,14 +61,13 @@
 #' @examples
 #' \dontrun{
 #' res <- countryside_sar(
-#'   data = mydata,
+#'   data = species_data,
 #'   method = "circles",
 #'   radius = 2000 * 1:10,
-#'   habitat = myraster,
+#'   habitat = land_use,
 #'   habitat_names = c("Forest", "Agriculture", "Shrubland"),
-#'   classification = myclassif,
+#'   classification = classes_clusters,
 #'   groups = "Forest",
-#'   seed = 123
 #' )
 #' }
 countryside_sar <- function(
@@ -84,7 +83,7 @@ countryside_sar <- function(
     # Habitat raster
     habitat = NULL,
     habitat_names = NULL,
-    # Species classification
+    # Species classification/general
     classification = NULL,
     groups = NULL,
     seed = NULL,
@@ -123,35 +122,42 @@ countryside_sar <- function(
   if (is.null(crs)) stop("No Coordinate reference system (crs) provided.")
 
   # n_runs
-  if (!is.numeric(n_runs) || n_runs < 1 || n_runs != round(n_runs)) {
+  if (!is.numeric(n_runs) || n_runs < 1 || n_runs != round(n_runs))
+  {
     stop("n_runs must be a positive integer")
   }
 
   # Method specific validation
-  if (method == "circles") {
+  if (method == "circles")
+  {
     if (is.null(radius)) stop("'radius' is required for method = 'circles'.")
     if (!is.numeric(radius) || any(radius <= 0))
       stop("'radius' must be a positive numeric vector.")
 
     # Validate custom hull if provided
-    if (!is.null(custom_hull)) {
-      if (!inherits(custom_hull, c("sf", "sfc"))) {
+    if (!is.null(custom_hull))
+    {
+      if (!inherits(custom_hull, c("sf", "sfc")))
+      {
         stop("custom_hull must be an sf or sfc object")
       }
 
       # Is hull CRS = points CRS
       hull_crs <- sf::st_crs(custom_hull)
-      if (hull_crs != sf::st_crs(crs)) {
+      if (hull_crs != sf::st_crs(crs))
+      {
         warning("Custom hull has different CRS than data. Attempting to transform...")
         custom_hull <- sf::st_transform(custom_hull, crs = crs)
       }
 
       # make sure custom hull is a polygon
-      if (!all(sf::st_geometry_type(custom_hull) %in% c("POLYGON"))) {
+      if (!all(sf::st_geometry_type(custom_hull) %in% c("POLYGON")))
+      {
         stop("custom_hull must be a polygon geometry")
       }
     }
-  } else {
+  } else
+  {
     if (is.null(square_size) || is.null(cluster_sizes))
       stop("'square_size' and 'cluster_sizes' are required for method = 'clusters'.")
 
@@ -202,7 +208,8 @@ countryside_sar <- function(
     filter_points_in_expanding_circles <- function(points_sf,
                                                    radius_vector,
                                                    convex_hull,
-                                                   break_threshold) {
+                                                   break_threshold)
+    {
       # Randomly selected point of sampling start
       selected_point <- points_sf[sample(1:nrow(points_sf), 1), ]
       points_within_circles <- list()
@@ -216,7 +223,8 @@ countryside_sar <- function(
         circle_area <- as.numeric(sf::st_area(circle))
         intersection_area <- as.numeric(sf::st_area(intersection))
 
-        if (intersection_area / circle_area < break_threshold) {
+        if (intersection_area / circle_area < break_threshold)
+        {
           break
         }
 
@@ -248,9 +256,9 @@ countryside_sar <- function(
     {
       npoints <- nrow(points_sf)
       n_clusters_vector <- npoints %/% cluster_size_vector
-      n_clusters_vector[n_clusters_vector == 0] <- 1  # when whole landscape, npoints < cluster_size
+      n_clusters_vector[n_clusters_vector == 0] <- 1  # when entire landscape, npoints < cluster_size
 
-      # result list
+      # initialize result list
       points_within_clusters <- list()
 
       for (i in seq_along(cluster_size_vector))
@@ -306,15 +314,17 @@ countryside_sar <- function(
     }
 
     extract_species_positions <- function(species_habitat_matrix,
-                                          species_site_matrix) {
+                                          species_site_matrix)
+    {
       # Get habitat names
-      habitat_names <- colnames(species_habitat_matrix[,-1])
+      habitat_names <- colnames(species_habitat_matrix[, -1])
 
       # Initialize a list to store species positions for each habitat
       habitat_positions <- list()
 
       # Loop through each habitat
-      for (habitat in habitat_names) {
+      for (habitat in habitat_names)
+      {
         # Get species associated with this habitat
         species_in_habitat <-
           rownames(species_habitat_matrix)[species_habitat_matrix[, habitat] == 1] # returns TRUE or FALSE
@@ -338,12 +348,12 @@ countryside_sar <- function(
                                 species_groups,
                                 species_group_names)
   {
-
     # Calculate the "Other" code as max habitat value + 1 for reclass
     other_code <- max(habitat_values) + 1
 
     # Add "Other" to habitat_names and habitat_values if it's not present in the data
-    if (!any(tolower(habitat_names) == "other")) {
+    if (!any(tolower(habitat_names) == "other"))
+    {
       habitat_names <- c(habitat_names, "Other")
       habitat_values <- c(habitat_values, other_code)
     }
@@ -421,10 +431,11 @@ countryside_sar <- function(
     # Initialize results and check validity for further analysis
     sar_results <- list()
     sar_results$valid <- FALSE
-    sar_results$message <- "" #here
+    sar_results$message <- "No valid SAR result for processing"
 
     # Check if there is any data for analysis
-    if (nrow(results_table) == 0) {
+    if (nrow(results_table) == 0)
+    {
       sar_results$message <- "No data for SAR analysis"
       return(sar_results)
     }
@@ -433,7 +444,8 @@ countryside_sar <- function(
     valid_rows <- results_table$Sp_Total > 0 & !is.na(results_table$Sp_Total) &
       is.finite(results_table$Sp_Total)
 
-    if (sum(valid_rows) < 2) {
+    if (sum(valid_rows) < 2)
+    {
       sar_results$message <- paste("Insufficient non-zero samples for SAR analysis (need at least 2, have",
                                    sum(valid_rows), ")")
       return(sar_results)
@@ -446,7 +458,8 @@ countryside_sar <- function(
     area_valid <- valid_table$Area_Total > 0 & !is.na(valid_table$Area_Total) &
       is.finite(valid_table$Area_Total)
 
-    if (sum(area_valid) < 2) {
+    if (sum(area_valid) < 2)
+    {
       sar_results$message <- "Insufficient valid area values for SAR analysis"
       return(sar_results)
     }
@@ -458,7 +471,8 @@ countryside_sar <- function(
     log_sp <- log(valid_table$Sp_Total)
 
     # Check for infinite values
-    if (any(!is.finite(log_area)) || any(!is.finite(log_sp))) {
+    if (any(!is.finite(log_area)) || any(!is.finite(log_sp)))
+    {
       sar_results$message <- "Infinite values in log-transformed data"
       return(sar_results)
     }
@@ -491,47 +505,52 @@ countryside_sar <- function(
   #-------------------------- cSAR Analysis Function ---------------------------
   analyze_countryside_sar <- function(csar_data,
                                       habitat_names,
-                                      species_group_names) {
-
-
+                                      species_group_names)
+  {
     csar_results <- list()
     csar_results$valid <- FALSE
-    csar_results$message <- ""
+    csar_results$message <- "No valid result for processing"
 
-    if (nrow(csar_data) < 2) {
+    if (nrow(csar_data) < 2)
+    {
       csar_results$message <- "Insufficient data for countryside SAR (need at least 2 samples)"
       return(csar_results)
     }
 
-    tryCatch({
-      if (!requireNamespace("sars", quietly = TRUE)) {
-        csar_results$message <- "Package 'sars' is required"
-        return(csar_results)
+    tryCatch(
+      {
+        if (!requireNamespace("sars", quietly = TRUE))
+        {
+          csar_results$message <- "Package 'sars' is required"
+          return(csar_results)
+        }
+
+        csar_results$model <- sars::sar_countryside(
+          data = csar_data,
+          modType = "power",
+          gridStart = "partial",
+          habNam = habitat_names,
+          spNam = species_group_names
+        )
+
+        csar_results$valid <- TRUE
+        csar_results$message <- "Countryside SAR completed successfully"
+
+      }, error = function(e)
+      {
+        csar_results$message <- paste("Error fitting countryside SAR model:", e$message)
+        csar_results$valid <- FALSE
       }
-
-      csar_results$model <- sars::sar_countryside(
-        data = csar_data,
-        modType = "power",
-        gridStart = "partial",
-        habNam = habitat_names,
-        spNam = species_group_names
-      )
-
-      csar_results$valid <- TRUE
-      csar_results$message <- "Countryside SAR completed successfully"
-
-    }, error = function(e) {
-      csar_results$message <- paste("Error:", e$message)
-      csar_results$valid <- FALSE
-    })
+    )
 
     return(csar_results)
   }
-
   #---------------------------- 4. Main processing -----------------------------
   points_sf <- sf::st_as_sf(data,
                             coords = c("long", "lat"),
                             crs = crs)
+
+  #### A) Circles Analysis ###
 
   if (method == "circles") {
 
@@ -539,11 +558,14 @@ countryside_sar <- function(
     sp_groups <- list()
     grp_names <- character()
 
-    for (col in group_cols) {
+    for (col in group_cols)
+    {
       species_in_group <- classification[classification[[col]] == 1, ]$species
       positions <- match(species_in_group, colnames(data)[4:ncol(data)])
       positions <- positions[!is.na(positions)]
-      if (length(positions) > 0) {
+
+      if (length(positions) > 0)
+      {
         sp_groups <- c(sp_groups, list(positions))
         grp_names <- c(grp_names, paste0("Sp_", col))
       }
@@ -563,7 +585,8 @@ countryside_sar <- function(
     # ----- Step 3: Run iterations -----
     runs <- list()
 
-    for (run in 1:n_runs) {
+    for (run in 1:n_runs)
+    {
       samples <- filter_points_in_expanding_circles(points_sf,
                                                     radius,
                                                     convex_hull,
@@ -594,17 +617,95 @@ countryside_sar <- function(
       )
     }
 
-    # ----- Step 4: Return results -----
+    # ----- Step 4: Calculate average SAR results for multiple runs -----
+    if (n_runs > 1)
+    {
+
+      # determine runs with valid SAR analysis
+      valid_runs <- which(sapply(runs, function(x) x$sar_analysis$valid))
+      invalid_runs <- setdiff(1:n_runs, valid_runs)
+
+      # Invalid runs warning message
+      if (length(valid_runs) < n_runs)
+      {
+        message("Break protocol activated for runs: ",
+                paste(invalid_runs, collapse = ", "), ".\n",
+                "Only runs ", paste(valid_runs, collapse = ", "), " used for SAR averaging.\n",
+                "Consider running the function again or adjust the sampling parameters to increase valid runs.")
+      } else
+      {
+        message("All ", n_runs, " runs were valid for SAR analysis.")
+      }
+
+      if (length(valid_runs) > 0)
+      {
+
+        slopes <- sapply(valid_runs, function(i) {
+          coef(runs[[i]]$sar_analysis$lm_model)[2]
+        })
+
+        intercepts <- sapply(valid_runs, function(i) {
+          coef(runs[[i]]$sar_analysis$lm_model)[1]
+        })
+
+        r_squared <- sapply(valid_runs, function(i) {
+          runs[[i]]$sar_analysis$lm_summary$r.squared
+        })
+
+        avg_sar_results <- list(
+          valid = TRUE,
+          message = paste("Average SAR results from", length(valid_runs), "valid runs"),
+          n_valid_runs = length(valid_runs),
+          avg_slope = mean(slopes),
+          avg_intercept = mean(intercepts),
+          avg_r_squared = mean(r_squared),
+          sd_slope = sd(slopes),
+          sd_intercept = sd(intercepts),
+          sd_r_squared = sd(r_squared),
+          slopes = slopes,
+          intercepts = intercepts,
+          r_squared_values = r_squared
+        )
+
+      } else
+      {
+        avg_sar_results <- list(
+          valid = FALSE,
+          message = "No valid SAR runs to average"
+        )
+      }
+    } else
+    {
+      # Single run: use the first run's SAR results
+      if (length(runs) > 0 && runs[[1]]$sar_analysis$valid)
+      {
+        avg_sar_results <- runs[[1]]$sar_analysis
+      } else
+      {
+        avg_sar_results <- list(
+          valid = FALSE,
+          message = "SAR analysis not valid"
+        )
+      }
+    }
+
+    # ----- Step 5: Return results -----
     res <- list(
       method = method,
       n_runs = n_runs,
       runs = runs,
+      avg_sar_results = avg_sar_results,
       points_sf = points_sf,
       convex_hull = convex_hull,
       hull_source = ifelse(is.null(custom_hull), "derived", "custom")
     )
-  } else {
+  } else
+
+    ### B) Clusters Analysis ###
+
+  {
     # Clusters method (deterministic, always single run)
+    # ----------- Step 1: Sample Data ----------------
     squares_sf <- create_squares(points_sf,
                                  square_size)
 
@@ -612,6 +713,7 @@ countryside_sar <- function(
                                          squares_sf,
                                          cluster_sizes)
 
+    # -------- Step 2: Extract Species Data -------------
     # Subset classification based on groups parameter for extract_species_positions
     if (!is.null(groups)) {
       classif_subset <- classification[, c(species_name_col, group_cols)]
@@ -634,6 +736,7 @@ countryside_sar <- function(
     samples_flat <- unlist(samples_points, recursive = FALSE)
     polygons_flat <- unlist(clusters_chulls, recursive = FALSE)
 
+    # ------- Step 3: Aggregate Species and Habitat Data ----------
     results_table <- summarize_samples(
       samples = samples_flat,
       polygons = polygons_flat,
@@ -644,6 +747,7 @@ countryside_sar <- function(
       species_group_names = species_group_names
     )
 
+    # -------- Step 4: Run SAR and cSAR Analysis ---------
     # Standard SAR analysis (uses full table)
     sar_analysis <- analyze_sar(results_table,
                                 method)
@@ -654,6 +758,7 @@ countryside_sar <- function(
     csar_analysis <- analyze_countryside_sar(csar_data,
                                              habitat_names,
                                              species_group_names)
+    # --------- Step 5: Return Results --------
     # result table
     res <- list(
       method = method,
@@ -662,11 +767,9 @@ countryside_sar <- function(
       csar_analysis = csar_analysis,
       samples = samples,
       squares_sf = squares_sf,
-      clusters_chulls = clusters_chulls
+      clusters_chulls = clusters_chulls,
+      points_sf = points_sf
     )
-    sar_analysis = sar_analysis
-    csar_analysis = csar_analysis
-    points_sf = points_sf
   }
 
   return(res)

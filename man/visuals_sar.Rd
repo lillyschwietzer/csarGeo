@@ -2,44 +2,81 @@
 % Please edit documentation in R/visuals_sar.R
 \name{visuals_sar}
 \alias{visuals_sar}
-\title{Visualize countryside_sar results}
+\title{Visualize countryside_sar() function results}
 \usage{
 visuals_sar(
   result,
   plot_type = NULL,
   plot_all_runs = TRUE,
   plot_run_n = NULL,
+  plot_average = FALSE,
   plot_all_levels = TRUE,
   plot_level_n = NULL
 )
 }
 \arguments{
-\item{result}{Output object from countryside_sar function.}
+\item{result}{Output object from countryside_sar function() from the csarGeo-Package.}
 
 \item{plot_type}{Defines the type of plot. Three possible options
 \itemize{
-\item \code{map} (map of the polygon hull + sampling locations with the chosen sampling method)
+\item \code{map} (Map of the polygon hull + sampling locations with the chosen sampling method. Adds sampling circles for method = 'circles' or plots the cluster )
 \item \code{sar} (log-log scaled linear regression)
 \item \code{csar} (heatmap of species group affinities to habitat types)
 }
 \code{map} and \code{sar} are available for results of both \code{method = circles} and \code{method = clusters}. \code{plot_type = csar} is only available for results of \code{method = clusters}.}
 
-\item{plot_all_runs}{Plot all runs of "circles" into one grid. Defaults to TRUE.}
+\item{plot_all_runs}{Plot all runs of "circles" into one grid if n_runs > 1. Defaults to TRUE.}
 
 \item{plot_run_n}{Plot only the result of the n-th run of "circles". Defaults to NULL.}
+
+\item{plot_average}{If TRUE, plots the average SAR result if n_runs > 1. Defaults to FALSE.}
 
 \item{plot_all_levels}{Plot all clustering levels of method "clusters" into one grid. Defaults to TRUE.}
 
 \item{plot_level_n}{Plot only the n-th clustering level as a solo plot. Defaults to NULL.}
 }
 \value{
-Creates either a single plot or a grid of multiple plots.
+Creates either a single plot or a grid of multiple plots. The function returns the input result object invisibly.
 }
 \description{
-A function to visualize the results of \code{countryside_sar()} from the csarGeo-Package. It can generate three plot types: "map", a plot of the polygon hull with the sampling locations and the chosen sampling method, "sar" for the base SAR analysis and "csar", only available for a result of method "clusters" to create an affinity heat map of the species groups to different habitats.
+A function to visualize the results of \code{countryside_sar()} from the csarGeo-Package.
+It can generate three plot types: "map", a plot of the polygon hull with the sampling locations and the chosen sampling method, "sar" for the base SAR analysis and "csar", only available for a result of method "clusters" to create an affinity heat map of the species groups to different habitats.
+The SAR results can be plotted as a single run result, a grid of multiple runs or as an average SAR.
+The plots of the sampling maps can either be done per level or run or in a grid.
 }
 \examples{
 \dontrun{
-plot_countryside_sar(res, plot_type = "map")
+res <- countryside_sar(
+  data = species_data,
+  method = "circles",
+  radius = 2000 * 1:10,
+  habitat = land_use,
+  habitat_names = c("Forest", "Agriculture", "Shrubland"),
+  classification = classes_clusters,
+  groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
+)
+
+# Map plot
+visuals_sar(res, plot_type = "map")
+
+# SAR plot
+visuals_sar(res, plot_type = "sar")
+
+# Average SAR (circles only)
+visuals_sar(res, plot_type = "sar", plot_average = TRUE)
+
+res <- countryside_sar(
+  data = data,
+  method = "clusters",
+  square_size = 2000,
+  cluster_sizes = c(1, 4, 16, 64, 256),
+  habitat = lu1995,
+  habitat_names = c("Forest", "Agriculture", "Shrubland"),
+  classification = classes_clusters,
+  groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
+)
+
+# CSAR heatmap (clusters only)
+visuals_sar(test_clusters, plot_type = "csar")
 }
 }
