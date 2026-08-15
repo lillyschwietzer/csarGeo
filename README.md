@@ -1,8 +1,6 @@
-Analyze binary species occurrence and classification data with a SAR or a cSAR analysis based on a nested or hierarchichal sampling design.
+csarGeo enables advanced SAR and cSAR analysis to assess biodiversity changes in structurally diverse landscapes using binary species occurrence- and classification data. It can be used to reveal both the species-area relationship (SAR) as well as habitat affinity differences across multiple species groups.
 
-csarGeo allows an advances SAR- and cSAR-analysis to assess biodiversity changes in structurally diverse landscapes. The cSAR analysis function can account for habitat affinity differences across multiple species groups beyond
-
-The package contains an associated vignette with detailed example usages for both of the available analysis methods. For further information regarding the background of countrysideSAR analyses, the papers of ... (pereira, martins)
+The package includes a vignette with detailed examples for both analysis methods. For more information regarding the background of the countrysideSAR model and different sampling approaches, see the references below.
 
 # Table of Contents
 
@@ -71,14 +69,14 @@ head(classes_clusters)
 #6 oriolus oriolus               1        0            0              0                    0
 ```
 
-And one SpatRaster land-use file. The latter is a release of the package and may be loaded using a helper function of the csarGeo package called `load_rasterfile()`:
+And one SpatRaster land-use file. The latter is a release of the package and may be loaded using a helper function of the csarGeo package called `load_landuse()`:
 
 ```{r}
 library(csarGeo)
 library(terra)
 
 # SpatRaster Data
-land_use <- load_lu1995()
+land_use95 <- load_landuse()
 terra::plot(land_use)
 ```
 
@@ -98,7 +96,7 @@ vignette("intro_csarGeo")
 
 # 2. Example Analysis
 
-The example below only contains information regarding the the analysis method "clusters", which is one of two possible pathways of the csarGeo package. For a detailed explanation as well as examples of both pathways, please consult the vignette.
+The example below only contains information regarding the the analysis method "clusters", which is one of two possible pathways of the csarGeo package. For a detailed explanation as well as examples of both pathways, "circles" and "clusters", please consult the vignette.
 
 ## 2.1) Analysis Function countryside_sar()
 
@@ -122,3 +120,6 @@ groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
 Visuals_sar() offers three possible plot options: "map", "sar" and "csar".
 
 # 3. References
+Martins, I., Pereira, H.M. Improving extinction projections across scales and habitats using the countryside species-area relationship. Sci Rep 7, 12899 (2017). https://doi.org/10.1038/s41598-017-13059-y
+Inês S. Martins u. a., „Alternative pathways to a sustainable future lead to contrasting biodiversity responses“, Global Ecology and Conservation 22 (Juni 2020): e01028, https://doi.org/10.1016/j.gecco.2020.e01028.
+Scheiner, Samuel. (2003). Six Types of Species-Area Curves. Global Ecology and Biogeography - GLOBAL ECOL BIOGEOGR. 12. 10.1046/j.1466-822X.2003.00061.x. 
