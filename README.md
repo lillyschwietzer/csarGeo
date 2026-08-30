@@ -1,20 +1,20 @@
-csarGeo enables advanced SAR and cSAR analysis to assess biodiversity changes in structurally diverse landscapes using binary species occurrence- and classification data. It can be used to reveal both the species-area relationship (SAR) as well as habitat affinity differences across multiple species groups.
+**csarGeo** enables advanced Species-Area Relationship (SAR) and countryside SAR (cSAR) analysis to assess biodiversity changes in structurally diverse landscapes using binary species occurrence and classification data. It can reveal both the species-area relationship and habitat affinity differences across multiple species groups.
 
-The package includes a vignette with detailed examples for both analysis methods. For more information regarding the background of the countrysideSAR model and different sampling approaches, see the references below.
+A detailed vignette with examples for both analysis methods is included. For background on the countrysideSAR model and different sampling approaches, see the References section.
 
 # Table of Contents
 
--   [Package Installation](https://github.com/lillyschwietzer/csarGeo/tree/main#1-installation)
+- [Installation](https://github.com/lillyschwietzer/csarGeo/tree/main#1-installation)
 
--   [Example Analysis](https://github.com/lillyschwietzer/csarGeo/tree/main#2-example-analysis)
+- [Example Analysis](https://github.com/lillyschwietzer/csarGeo/tree/main#2-example-analysis)
 
--   [References](https://github.com/lillyschwietzer/csarGeo/tree/main#3-references)
+- [References](https://github.com/lillyschwietzer/csarGeo/tree/main#3-references)
 
 # 1. Installation
 
 ## 1.1) csarGeo Package
 
-Install package from GitHub:
+Install directly from GitHub using the `pak` package:
 
 ```{r}
 library(pak)
@@ -25,7 +25,11 @@ library(csarGeo)
 
 ## 1.2) csarGeo Package Data
 
-The package contains three different default data files. One that contains species occurence data and sampling location coordinate information:
+The package contains three different default datasets: "**species_data**", "**classes_clusters**" and a land-use SpatRaster. These can be used for example analyses and as a reference for the required input data structure.
+
+- **species_data**
+
+Binary species occurrence data with coordinates for sampling locations:
 
 ```{r}
 data("species_data")
@@ -53,7 +57,9 @@ head(species_data)
 # ℹ Use `print(n = ...)` to see more rows, and `colnames()` to see all variable names
 ```
 
-One species classification file:
+- **classes_clusters**
+
+Binary classification data assigning species to habitat groups:
 
 ```{r}
 data("classes_clusters")
@@ -69,7 +75,9 @@ head(classes_clusters)
 #6 oriolus oriolus               1        0            0              0                    0
 ```
 
-And one SpatRaster land-use file. The latter is a release of the package and may be loaded using a helper function of the csarGeo package called `load_landuse()`:
+- **SpatRaster** file
+
+Contains land-use information. Load it using the helper function `load_landuse()`:
 
 ```{r}
 library(csarGeo)
@@ -77,12 +85,16 @@ library(terra)
 
 # SpatRaster Data
 land_use95 <- load_landuse()
-terra::plot(land_use)
+terra::plot(land_use95)
 ```
 
 ![](vignettes/images/raster_file_ex.jpeg)
 
 ## 1.3) csarGeo Vignette
+
+The package includes the vignette `"intro_csarGeo"`, which provides detailed background on the methodology, the internal workflow of the `countryside_sar()` function, its two analysis pathways, and the output structure.
+
+To install the package with its vignette:
 
 ```{r}
 library(devtools)
@@ -96,7 +108,7 @@ vignette("intro_csarGeo")
 
 # 2. Example Analysis
 
-The example below only contains information regarding the the analysis method "clusters", which is one of two possible pathways of the csarGeo package. For a detailed explanation as well as examples of both pathways, "circles" and "clusters", please consult the vignette.
+The example below demonstrates the **"clusters"** analysis method, one of two pathways available in the package. For detailed explanations and examples of both pathways (`"circles"` and `"clusters"`), please consult the vignette.
 
 ## 2.1) Analysis Function countryside_sar()
 
@@ -106,7 +118,7 @@ res_cl <- countryside_sar(
   method = "clusters",
   square_size = 2000,
   cluster_sizes = c(1, 4, 16, 64, 256),
-  habitat = land_use,
+  habitat = land_use95,
   habitat_names = c("Forest", "Agriculture", "Shrubland"),
   classification = classes_clusters,
 groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
@@ -117,9 +129,29 @@ groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
 
 ## 2.2) Visualization Function visuals_sar()
 
-Visuals_sar() offers three possible plot options: "map", "sar" and "csar".
+The second function, `visuals_sar()`, offers three possible plot options for the results of `countryside_sar()`:
+
+- "map" - Map of all clustering levels
+
+- "sar" - Species-area-relationship plot
+
+- "csar" - species habitat affinity heatmap
+
+```{r}
+# Map of all cluster levels
+visuals_sar(res_cl, plot_type = "map")
+
+# SAR plot
+visuals_sar(res_cl, plot_type = "sar")
+
+# Species affinity heatmap
+visuals_sar(res_cl, plot_type = "csar")
+```
 
 # 3. References
-Martins, I., Pereira, H.M. Improving extinction projections across scales and habitats using the countryside species-area relationship. Sci Rep 7, 12899 (2017). https://doi.org/10.1038/s41598-017-13059-y
-Inês S. Martins u. a., „Alternative pathways to a sustainable future lead to contrasting biodiversity responses“, Global Ecology and Conservation 22 (Juni 2020): e01028, https://doi.org/10.1016/j.gecco.2020.e01028.
-Scheiner, Samuel. (2003). Six Types of Species-Area Curves. Global Ecology and Biogeography - GLOBAL ECOL BIOGEOGR. 12. 10.1046/j.1466-822X.2003.00061.x. 
+
+Inês S. Martins u. a., „Alternative pathways to a sustainable future lead to contrasting biodiversity responses“, Global Ecology and Conservation 22 (Juni 2020): e01028, <https://doi.org/10.1016/j.gecco.2020.e01028>.
+
+Martins, I., Pereira, H.M. Improving extinction projections across scales and habitats using the countryside species-area relationship. Sci Rep 7, 12899 (2017). <https://doi.org/10.1038/s41598-017-13059-y>
+
+Scheiner, Samuel. (2003). Six Types of Species-Area Curves. Global Ecology and Biogeography - GLOBAL ECOL BIOGEOGR. 12. 10.1046/j.1466-822X.2003.00061.x.

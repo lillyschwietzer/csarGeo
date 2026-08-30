@@ -146,23 +146,17 @@ Due to its nested design, circles produces sampling data with high spatial autoc
 
 For the classic SAR analysis and based on the species-area-relationship model of
 
-$$
-S = c * A^z
-$$
+$$S = c * A^z$$
 
 where *S* is species richness, *A* is the sampled area, *z* is the species accumulation rate (slope), and *c* is the species richness at unit area (intercept). The function fits a log-log scaled standard linear regression model to the sampled species data, which is defined as:
 
-$$
-log(S) = log(c) + z * log(A)
-$$
+$$log(S) = log(c) + z * log(A)$$
 
 This classic model approach assumes that all habitat types contribute equally to species richness, effectively treating the landscape as homogeneous.
 
 The cSAR model extends the classic SAR formula by replacing the total area A with a habitat-weighted area sum using
 
-$$
-S_i(A_1, A_2, \ldots, A_n) = c_i \left( \sum_{j=1}^{n} h_{ij} A_j \right)^z
-$$
+$$S_i(A_1, A_2, \ldots, A_n) = c_i \left( \sum_{j=1}^{n} h_{ij} A_j \right)^z$$
 
 where *n* is the number of habitat types,*h~ij~* is the affinity of the species group *i* to habitat *j*, *Aj* the area of habitat *j*, and *c~i~* measures the relative local abundance of each species group *i* (Martins and Pereira, 2017)
 
@@ -172,9 +166,7 @@ The detailed difference between both SAR models is described in *Matthews, sars 
 
 The cSAR analysis then fits the following non-linear regression model to the sampled data of each species group for each habitat to determine the affinities of all species groups to all available habitats.
 
-$$
-S \sim (h_1 \times A_1 + h_2 \times A_2 + h_3 \times A_3)^z
-$$
+$$S \sim (h_1 \times A_1 + h_2 \times A_2 + h_3 \times A_3)^z$$
 
 # 3. Output
 
