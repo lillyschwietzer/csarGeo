@@ -1,6 +1,6 @@
-**csarGeo** enables advanced Species-Area Relationship (SAR) and countryside SAR (cSAR) analysis to assess biodiversity changes in structurally diverse landscapes using binary species occurrence and classification data. It can reveal both the species-area relationship and habitat affinity differences across multiple species groups.
+**csarGeo** enables advanced Species-Area Relationship (SAR) and countryside SAR (cSAR) analysis to assess biodiversity changes in structurally diverse landscapes using binary species occurrence and classification data. It can reveal both the species-area relationship and habitat affinity differences across multiple species groups.
 
-A detailed vignette with examples for both analysis methods is included. For background on the countrysideSAR model and different sampling approaches, see the References section.
+A detailed vignette with examples for both analysis methods is included. For background on the countrysideSAR model and different sampling approaches, see the References section.
 
 # Table of Contents
 
@@ -92,7 +92,7 @@ terra::plot(land_use95)
 
 ## 1.3) csarGeo Vignette
 
-The package includes the vignette `"intro_csarGeo"`, which provides detailed background on the methodology, the internal workflow of the `countryside_sar()` function, its two analysis pathways, and the output structure.
+The package includes the vignette `"intro_csarGeo"`, which provides detailed background on the methodology, the internal workflow of the `countryside_sar()` function, its two analysis pathways, and the output structure.
 
 To install the package with its vignette:
 
@@ -108,7 +108,7 @@ vignette("intro_csarGeo")
 
 # 2. Example Analysis
 
-The example below demonstrates the **"clusters"** analysis method, one of two pathways available in the package. For detailed explanations and examples of both pathways (`"circles"` and `"clusters"`), please consult the vignette.
+The example below demonstrates the **"clusters"** analysis method, one of two pathways available in the package. For detailed explanations and examples of both pathways (`"circles"` and `"clusters"`), please consult the vignette.
 
 ## 2.1) Analysis Function countryside_sar()
 

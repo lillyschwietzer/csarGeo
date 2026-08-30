@@ -32,27 +32,35 @@ img {
 }
 ```
 
-This vignette offers a detailed introduction to the **csarGeo** package. Its aim is to familiarize you with the necessary structure of the input data and to provide an overview of the workflow of both the countryside_sar() and the visuals_sar() function. Further it will explain the influence of your data, specifically of the evenness of sampling locations, on the accuracy of the analysis function countryside_sar() to ensure optimal utilization.
+This vignette provides a detailed introduction to the **csarGeo** package. It will familiarize you with the required structure of input data and provide an overview of the workflow for both the `countryside_sar()` and `visuals_sar()` functions. Additionally, it explains the necessary input data structure, specifically the evenness of sampling locations, and its effect on the accuracy of the analysis to ensure optimal utilization.
 
 ## Prior To Using The Package
 
-The csarGeo package was created to offer a short and bundled option for an advanced SAR-analysis that offers the ability to analyze biodiversity changes in structurally diverse landscapes while accounting for habitat affinity across multiple species groups. As suggested in previous studies, classic SAR models tend to overestimate species extinction rates due to their inherent assumption of complete species-extinction given a non-native habitat (Newbold et al., 2015). In contrast countryside SAR (cSAR) models assume possible persistence even in human-modified habitats under different habitat affinities (Martins et al., 2017, Martins et al., 2020). cSAR models therefore offer a potentially powerful analysis tool for biodiversity changes and the csarGeo package provides an option to analyze data in this manner with only one function, **countryside_sar()** as well as a quick way to create base plots of the results with **visuals_sar()**. Using generic input data (s. 1 Input Data), the function transforms, samples, aggregates and analyzes the species-area-relationship.
+The csarGeo package was developed to provide a short and bundled option for an advanced Species-Area-Relationship (SAR) analysis. It enables the assessment of biodiversity changes in structurally diverse landscapes while accounting for habitat affinity across multiple species groups.
 
-However in order to use this package to its full power, the user should be aware of potential limitations of the analysis method and the influence of the input data. Per design the countryside_sar() function is most suitable for data sets of intermediate extents with spatially balanced, evenly distributed sampling locations (s. Fig. 1).
+As suggested in previous studies, classic SAR models tend to overestimate species extinction rates due to their inherent assumption of total species-extinction in non-native habitats (Newbold et al., 2015). In contrast countryside SAR (cSAR) models can account for the potential persistence of species in human-modified habitats under different habitat affinities (Martins et al., 2017, Martins et al., 2020). cSAR models therefore offer a powerful analysis tool to assess biodiversity changes.
 
-Locally clustered sampling locations, especially in the outer perimeter of the sampling area, may cause an early sampling stop in case of the first method, "circles". As this method begins from a randomly selected data point outwards, densely clustered sampling locations result in a high probability of choosing a similar location to begin sampling over and over again, Further, this method includes a break-protocol that activates once a defined proportion (50 % by default) of the circular sampling vector lies outside of the sampling area. If your sampling locations occupy corners of your sampling area very often, the function is likely to stop sampling very early.
+csarGeo provides an option to perform both a SAR and a cSAR analysis with only one analysis function, `countryside_sar(),` as well as the optional function `visuals_sar()` to create base plots of the results. Using generic input data (s. 1 Input Data), the function transforms, samples, aggregates and analyzes the species-area-relationship.
 
-As for the second analysis pathway "clusters" the function classifies different sampling locations in hierarchical groups based on their proximity to one another. Because of that, large spatial distances between sampling locations cause great jumps of cluster extents from one level to the next.
+However, in order to use this package to its full power, users should be aware of potential limitations of the analysis method and the influence of the input data. Per design `countryside_sar()` is most suitable for data sets of intermediate extents with spatially balanced, evenly distributed sampling locations (s. Fig. 1).
 
-Both of these pathways are explained in detail under 2.1 and 2.2. A high-resolution land-use raster further increases the accuracy of the pixel-based calculation of the habitat areas and minimizes edge effects around the polygons.
+- For method "**circles**"
 
-![Figure 1: Layout Comparison](images/ideal_data.jpeg)
+Locally clustered sampling locations, especially in the outer perimeter of the sampling area, may cause an early sampling stop for "circles". Since this method samples from a randomly selected data point outwards, dense clusters increase the probability of repeatedly selecting similar starting locations to begin sampling, causing local overfitting and a reduced ability to generalize the sampled data. Further, this method includes a break-protocol that activates once a defined proportion (50 % by default) of the circular sampling vector lies outside of the sampling area, indicated in red in Fig. 1. If your sampling locations occupy corners of your sampling area very often, the function is likely to stop sampling very early.
+
+- For method "**clusters**"
+
+This method classifies sampling locations into hierarchical groups based on their proximity to one another. Consequently, large spatial distances between sampling locations due to an uneven distribution can cause great jumps of cluster extents from one level to the next. The sampled data may be lacking intermediate spatial scales, making the data less representative of the true habitat mosaic of the landscape at different scales. Without this, the model cannot properly estimate the habitat affinity values of each species group to the habitat types of the landscape.
+
+Both of "circles" and "clusters" are explained in detail under 2.2 and 2.3. A high-resolution land-use raster further increases the accuracy of the pixel-based calculation of the habitat areas and minimizes edge effects around the polygons.
+
+![Figure 1: Sampling Layout Comparison; the red polygon line indicates the sampling boundary, red dots the individual sampling locations](images/ideal_data.jpeg)
 
 # 1. Input Data
 
 ## 1.1 Input Files: Species Data, Raster- and Species Class File
 
-The analysis function countryside_sar() needs three distinct input files. An example of each is provided as default data of the csarGeo package, which can be used to run an example analysis (s. 5).
+The analysis function `countryside_sar()` needs three distinct input files. An example of each is provided as default data of the csarGeo package, which can be used to run an example analysis (s. 5).
 
 The first file, the **species data table**, needs a location ID as the first column, the longitude and latitude values as its second and third columns and binary presence-absence species data from column 4 and onward. The function receives this table as the parameter "data".
 
