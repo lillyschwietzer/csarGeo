@@ -79,24 +79,25 @@ head(species_data)
 
 2.  **Species Classification Table**
 
+- Column 1: species name
+
+- Columns 2 onward: species groups, binary assignment (0 = doesn't belong to group, 1 = belongs to group)
+
 ```{r}
 data("classes_clusters") 
 head(classes_clusters)
 ```
 
-of the sampling locations for the parameter "habitat" and finally a **classification file** for the parameter "classification". The classification file should contain the species name as the first column and a binary classification to habitat affinities from column 2 and onward (s. figure 3). It is not necessary to mind upper- and lowercase letters for the species names as the function defaults all names to lowercase to account for formatting errors.
+It is not necessary to mind upper- and lowercase letters for the species names as the function defaults all names to lowercase to account for formatting errors. However, the species names of the classification table and the presence-absence species data table must match.
+
+3.  **Land-Use SpatRaster**
 
 ```{r}
 land_use <- load_landuse()
 plot(land_use)
 ```
 
-```{r}
-data("classes_clusters") 
-head(classes_clusters)
-```
-
-Optionally, the user can import a custom polygon hull using 'custom_hull' for the analysis area of method 'circles', which will be auto-generated otherwise. It should share the same coordinate reference system (CRS) as the raster file, the latter of which should have appropriately projected coordinate data, especially for edge cases like polar or equatorial regions (Kumar et al., 2023).
+It must contain land-use information of the entire sampling area. Optionally, the user can import a custom polygon hull using the parameter 'custom_hull' for the analysis area of method 'circles'. Without a user-import, this boundary is auto-generated. It should share the same coordinate reference system (CRS) as the raster file, the latter of which should have appropriately projected coordinate data, especially for edge cases like polar or equatorial regions (Kumar et al., 2023).
 
 # 2. Workflow
 
