@@ -52,7 +52,7 @@ Locally clustered sampling locations, especially in the outer perimeter of the s
 
 This method classifies sampling locations into hierarchical groups based on their proximity to one another. Consequently, large spatial distances between sampling locations due to an uneven distribution can cause great jumps of cluster extents from one level to the next. The sampled data may be lacking intermediate spatial scales, making the data less representative of the true habitat mosaic of the landscape at different scales. Without this, the model cannot properly estimate the habitat affinity values of each species group to the habitat types of the landscape.
 
-Both of "circles" and "clusters" are explained in detail under 2.2 and 2.3. A high-resolution land-use raster further increases the accuracy of the pixel-based calculation of the habitat areas and minimizes edge effects around the polygons.
+Both of "circles" and "clusters" are explained in detail under sections 2.2 and 2.3. A high-resolution land-use raster further increases the accuracy of the pixel-based calculation of the habitat areas and minimizes edge effects around the polygons.
 
 ![Figure 1: Sampling Layout Comparison; the red polygon line indicates the sampling boundary, red dots the individual sampling locations](images/ideal_data.jpeg)
 
@@ -60,16 +60,31 @@ Both of "circles" and "clusters" are explained in detail under 2.2 and 2.3. A hi
 
 ## 1.1 Input Files: Species Data, Raster- and Species Class File
 
-The analysis function `countryside_sar()` needs three distinct input files. An example of each is provided as default data of the csarGeo package, which can be used to run an example analysis (s. 5).
+The analysis function `countryside_sar()` requires three distinct input files. Examples of each are included as default datasets in the csarGeo package and can be used to run a sample analysis (see section 5).
 
-The first file, the **species data table**, needs a location ID as the first column, the longitude and latitude values as its second and third columns and binary presence-absence species data from column 4 and onward. The function receives this table as the parameter "data".
+1.  **Species Data Table**
+
+- Column 1: sampling location ID
+
+- Columns 2 - 3: longitude and latitude values
+
+- Columns 4 onward: binary presence-absence data for each species (0 = absent, 1 = present)
+
+The function receives this table as the parameter "data".
 
 ```{r}
 data("species_data")
 head(species_data)
 ```
 
-The function further requires a **spatial raster file** of the sampling locations for the parameter "habitat" and finally a **classification file** for the parameter "classification". The classification file should contain the species name as the first column and a binary classification to habitat affinities from column 2 and onward (s. figure 3). It is not necessary to mind upper- and lowercase letters for the species names as the function defaults all names to lowercase to account for formatting errors.
+2.  **Species Classification Table**
+
+```{r}
+data("classes_clusters") 
+head(classes_clusters)
+```
+
+of the sampling locations for the parameter "habitat" and finally a **classification file** for the parameter "classification". The classification file should contain the species name as the first column and a binary classification to habitat affinities from column 2 and onward (s. figure 3). It is not necessary to mind upper- and lowercase letters for the species names as the function defaults all names to lowercase to account for formatting errors.
 
 ```{r}
 land_use <- load_landuse()
