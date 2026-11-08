@@ -11,19 +11,25 @@ visuals_sar(
   plot_run_n = NULL,
   plot_average = FALSE,
   plot_all_levels = TRUE,
-  plot_level_n = NULL
+  plot_level_n = NULL,
+  focal_habitat = NULL,
+  total_area = NULL
 )
 }
 \arguments{
 \item{result}{Output object from countryside_sar function() from the csarGeo-Package.}
 
-\item{plot_type}{Defines the type of plot. Three possible options
+\item{plot_type}{Defines the type of plot. Six possible options:
 \itemize{
-\item \code{map} (Map of the polygon hull + sampling locations with the chosen sampling method. Adds sampling circles for method = 'circles' or plots the cluster )
-\item \code{sar} (log-log scaled linear regression)
-\item \code{csar} (heatmap of species group affinities to habitat types)
+\item \code{map} (Map of the polygon hull + sampling locations with the chosen sampling method. Adds sampling circles for method = 'circles' or plots the clusters)
+\item \code{sar} (log-log scaled linear regression of total area vs total richness)
+\item \code{csar} (log-log effective area scaling per species group; clusters only)
+\item \code{fit} (predicted vs. observed total richness scatterplot; clusters only)
+\item \code{affinities} (heatmap of species group affinities to habitat types; clusters only)
+\item \code{habitat_proportion} (predicted richness along a focal habitat proportion gradient; if \code{focal_habitat = NULL}, a grid across all habitats; clusters only)
 }
-\code{map} and \code{sar} are available for results of both \code{method = circles} and \code{method = clusters}. \code{plot_type = csar} is only available for results of \code{method = clusters}.}
+\code{map} and \code{sar} are available for results of both \code{method = "circles"} and
+\code{method = "clusters"}. All other types are only available for \code{method = "clusters"}.}
 
 \item{plot_all_runs}{Plot all runs of "circles" into one grid if n_runs > 1. Defaults to TRUE.}
 
@@ -34,15 +40,29 @@ visuals_sar(
 \item{plot_all_levels}{Plot all clustering levels of method "clusters" into one grid. Defaults to TRUE.}
 
 \item{plot_level_n}{Plot only the n-th clustering level as a solo plot. Defaults to NULL.}
+
+\item{focal_habitat}{For \code{plot_type = "habitat_proportion"}, the habitat whose
+proportion is varied along the x-axis. If \code{NULL} (default), a grid of all
+habitats is produced.}
+
+\item{total_area}{For \code{plot_type = "habitat_proportion"}, the fixed total area at
+which habitat proportions are varied. Defaults to the mean Area_Total of the data.}
 }
 \value{
-Creates either a single plot or a grid of multiple plots. The function returns the input result object invisibly.
+Creates either a single plot or a grid of multiple plots. The function returns
+the input result object invisibly.
 }
 \description{
 A function to visualize the results of \code{countryside_sar()} from the csarGeo-Package.
-It can generate three plot types: "map", a plot of the polygon hull with the sampling locations and the chosen sampling method, "sar" for the base SAR analysis and "csar", only available for a result of method "clusters" to create an affinity heat map of the species groups to different habitats.
-The SAR results can be plotted as a single run result, a grid of multiple runs or as an average SAR.
-The plots of the sampling maps can either be done per level or run or in a grid.
+It can generate six plot types: "map", a plot of the polygon hull with the
+sampling locations and the chosen sampling method; "sar" for the base SAR analysis;
+and, only for \code{method = "clusters"}, "csar" for effective area scaling,
+"fit" for a predicted vs. observed scatterplot, "affinities" for a heatmap of
+species-group affinities to habitats, and "habitat_proportion" for richness
+along a single-habitat proportion gradient.
+The SAR results can be plotted as a single run result, a grid of multiple runs or
+as an average SAR. The plots of the sampling maps can either be done per level or run
+or in a grid.
 }
 \examples{
 \dontrun{
@@ -76,7 +96,19 @@ res <- countryside_sar(
   groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
 )
 
-# CSAR heatmap (clusters only)
-visuals_sar(test_clusters, plot_type = "csar")
+# cSAR effective area scaling
+visuals_sar(res, plot_type = "csar")
+
+# cSAR model fit (predicted vs observed)
+visuals_sar(res, plot_type = "fit")
+
+# Affinity heatmap
+visuals_sar(res, plot_type = "affinities")
+
+# Habitat proportion gradient (grid of all habitats)
+visuals_sar(res, plot_type = "habitat_proportion")
+
+# Habitat proportion gradient (single focal habitat)
+visuals_sar(res, plot_type = "habitat_proportion", focal_habitat = "Forest")
 }
 }

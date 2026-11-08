@@ -52,7 +52,7 @@ Locally clustered sampling locations, especially in the outer perimeter of the s
 
 This method classifies sampling locations into hierarchical groups based on their proximity to one another. Consequently, large spatial distances between sampling locations due to an uneven distribution can cause great jumps of cluster extents from one level to the next. The sampled data may be lacking intermediate spatial scales, making the data less representative of the true habitat mosaic of the landscape at different scales. Without this, the model cannot properly estimate the habitat affinity values of each species group to the habitat types of the landscape.
 
-Both of "circles" and "clusters" are explained in detail under sections 2.2 and 2.3. A high-resolution land-use raster further increases the accuracy of the pixel-based calculation of the habitat areas and minimizes edge effects around the polygons.
+The full sampling workflow of both "circles" and "clusters" is explained in detail under sections 2.2 and 2.3. A high-resolution land-use raster further increases the accuracy of the pixel-based calculation of the habitat areas and minimizes edge effects around the polygons.
 
 ![Figure 1: Sampling Layout Comparison; the red polygon line indicates the sampling boundary, red dots the individual sampling locations](images/ideal_data.jpeg)
 
@@ -88,7 +88,7 @@ data("classes_clusters")
 head(classes_clusters)
 ```
 
-It is not necessary to mind upper- and lowercase letters for the species names as the function defaults all names to lowercase to account for formatting errors. However, the species names of the classification table and the presence-absence species data table must match.
+It is not necessary to mind upper- and lowercase letters for the species names as the function defaults all names to lowercase to account for formatting errors. However, the species names in the classification table and the presence-absence species data table must match.
 
 3.  **Land-Use SpatRaster**
 
@@ -97,7 +97,7 @@ land_use <- load_landuse()
 plot(land_use)
 ```
 
-It must contain land-use information of the entire sampling area. Optionally, the user can import a custom polygon hull using the parameter 'custom_hull' for the analysis area of method 'circles'. Without a user-import, this boundary is auto-generated. It should share the same coordinate reference system (CRS) as the raster file, the latter of which should have appropriately projected coordinate data, especially for edge cases like polar or equatorial regions (Kumar et al., 2023).
+It must contain land-use information for the entire sampling area. Optionally, the user can import a custom polygon hull using the parameter 'custom_hull' for the analysis area of method "circles". Without a user-import, this boundary is auto-generated. It should share the same coordinate reference system (CRS) as the raster file, which should be in an appropriately projected CRS, especially for edge cases like polar or equatorial regions (Kumar et al., 2023).
 
 # 2. Workflow
 
@@ -105,21 +105,21 @@ The countryside_sar() function offers a quite overwhelming choice of possible pa
 
 ## 2.1 General Workflow
 
-To begin, and regardless of the method of choice, the function combines the latitude and longitude column data into one coordinate column for each location. To assure proper transformation, make sure you are aware of the projection of the latitude and longitude of your data as per 1.
+To begin, and regardless of the method of choice, the function combines the latitude and longitude column data into one coordinate column for each location. To assure proper transformation, make sure you are aware of the projection of the latitude and longitude of your data as per section 1.
 
 It then continues with one of two possible analysis pathways: either "circles" or "clusters". Method "circles" samples data-points in expanding circles within a polygon hull, beginning with a randomly selected sampling point. "Clusters" executes a step-wise proximity based grouping of sampling locations from singular sampling units up to the entire sampling area. While the method differs, both sample species data and locations, which are then used to aggregate species occurrence data as well as habitat and total area in a results table.
 
-As its last step countryside_sar() executes a SAR analysis by fitting the aggregated species and area data of either method with a simple log-log scaled linear power model and, in case of "clusters", a countryside SAR analysis as well. The cSAR analysis provides information about the habitat affinity of each species group to each habitat of the raster.
+As its last step countryside_sar() executes a SAR analysis by fitting the aggregated species and area data of either method with a simple log-log scaled linear power model and, in case of "clusters", a countryside SAR analysis as well. This cSAR analysis provides information about the habitat affinity of each species group to each habitat of the raster.
 
 ## 2.2 Method: Circles
 
 ![Figure 3: Expanding Circles Sampling](images/method_circles_plot.jpeg){width="585"}
 
-The **expanding circles sampling** is one of two possible sampling methods of the function `countryside_sar()`, most suited for a classic SAR analysis. Prior to sampling, the function wraps a hull around all sampling locations, indicated in red in figure 3. The function may use a hull imported via the custom_hull parameter or it will auto-generate one. Then one of the sampling locations within the hull is chosen randomly as the first sampling point. In step-wise expanding circles, the function then samples species, habitat- and coordinate data for every defined radius and then aggregated for each circle: the area of each habitat, the total area, the species richness of each species group, the total species richness and the total polygon area.
+The **expanding circles sampling** is one of two possible sampling methods of the function `countryside_sar()`, most suited for a classic SAR analysis. Prior to sampling, the function wraps a hull around all sampling locations, indicated in red in figure 3. The function may use a hull imported via the `custom_hull` parameter, or it will auto-generate one. Then one of the sampling locations within the hull is chosen randomly as the first sampling point. In step-wise expanding circles, the function then samples species, habitat, and coordinate data for every defined radius and then aggregates for each circle: the area of each habitat, the total area, the species richness of each species group, the total species richness and the total polygon area.
 
-The properties of the expanding circles are defined by the parameter 'radius'. It defines both the amount of circles used to sample data via the vector length as well as the distance between the circles.
+The properties of the expanding sampling circles are defined by the parameter `radius`. It defines both the amount of circles used to sample data via the vector length as well as the distance between the circles.
 
-The function stops sampling by default if more than 50 % of the area of a circular vector lie outside of the hull boundary. If needed, this can be adjusted using the parameter 'break_threshold' ranging from 0 (function continues regardless of how much of the circle lies outside of the hull) to 1 (the function breaks off immediately if any part of the circle lies outside of the hull).
+The function stops sampling by default if more than 50 % of the area of a circular vector lie outside of the hull boundary. If needed, this can be adjusted using the parameter `break_threshold` ranging from 0 (function continues regardless of how much of the circle lies outside of the hull) to 1 (the function breaks off immediately if any part of the circle lies outside the hull).
 
 A full analysis example is provided in 5.1.
 
@@ -143,13 +143,13 @@ To use the first pathway, "circles", the user may choose from the following para
 
 ![Example Plot of Clusters with 5 levels](images/Rplot03.jpeg)
 
-In contrast to "circles", the analysis of "clusters" is deterministic: it always begins with every individual sampling location as a cluster unit and ends with one final cluster that entails all sampling locations. Is is most useful for a cSAR analysis, but it also provides a SAR analysis option as well. However, as the step wise increase of area isn't as even as for method 'circles', the model fit of the species-area-relationship for a classic SAR is typically below the model fit of method 'circles.
+In contrast to "circles", the analysis of "clusters" is deterministic: it always begins with every individual sampling location as a cluster unit and ends with one final cluster that includes all sampling locations. It is most useful for a cSAR analysis, but it also provides a SAR analysis option as well. However, the step wise increase of area is determined by the distribution of sampling points in the landscape and thus more prone to uneven increases of areas in between levels compared to the evenly spaced sampling circles of method "circles". As a result, the model fit of the classic SAR for method "clusters" is typically lower than for method "circles" on the same dataset.
 
-The clustering of samples is proximity-based and, as for method 'circles', saves habitat, species occurrence data of the sampling locations within each cluster, as well as geometry data of the polygon around the cluster. It is not possible to import hulls in the same manner as for circles, every polygon is auto-generated.
+The clustering of samples is proximity-based and, as for method "circles", saves habitat, species occurrence data of the sampling locations within each cluster, as well as geometry data of the polygon around the cluster. It is not possible to import hulls in the same manner as for "circles", every polygon is auto-generated.
 
-Each level of the clusters method groups sampling locations and their species data. The first level assigns a group to each sampling location, the last group includes all locations in one cluster.
+Each level of the clusters method aggregates sampling locations and their species data for each cluster. The first level assigns a group to each sampling location (every location is its own cluster), the last group includes all locations in one cluster.
 
-For this analysis pathway, countryside_SAR offers and needs the following parameters:
+For this analysis pathway, `countryside_SAR()` requires the following parameters:
 
 | Parameter | Description | Necessary |
 |------------------------|------------------------|------------------------|
@@ -164,13 +164,13 @@ For this analysis pathway, countryside_SAR offers and needs the following parame
 
 ## 2.4 Classic SAR and cSAR Analysis
 
-Despite its name, the countryside_sar function offers two possible models for the sampled species data: a **classic SAR analysis** and a **countryside SAR analysis (cSAR)**, both of which use the sars package as well as the aggregated data from either the circles or the clusters pathway. While the classic SAR is available for both analysis pathways, the cSAR analysis is only possible using method clusters.
+Despite its name, the `countryside_sar()` function offers two possible models for the sampled species data: a **classic SAR analysis** and a **countryside SAR analysis (cSAR)**, both of which use the sars package as well as the aggregated data from either the circles or the clusters pathway. While the classic SAR is available for both analysis pathways, the cSAR analysis is only possible using method 'clusters'.
 
-Due to its nested design, circles produces sampling data with high spatial autocorrelation. Further, the step-wise increase of the sampling circles produce a table with varying spatial data, but offers no way to differentiate the habitat quality of the sampled area in a general context. By running circles multiple times, it is possible to produce a usable SAR analysis via the average of all individual SAR results, but due to the overlap between the runs, multiple runs cannot be used in the same manner as multiple hierarchical levels of method clusters to run a cSAR analysis. The latter allows for the discrimination of habitat quality alongside spatial variance: the cSAR analysis does not simply compare the species richness of each cluster within each level, it also compares the habitat mosaics of all the clusters within a hierarchical level to assess the habitat affinity of each species group to the available habitats. In contrast, the classic SAR only projects the species richness depending on the total area available, the habitat qualities do not matter here.
+Due to its nested design, "circles" produces sampling data with high spatial autocorrelation. Further, the step-wise increase of the sampling circles produce a table with varying spatial data, but offers no way to differentiate the habitat quality of the sampled area in a general context. By running "circles" multiple times, it is possible to produce a usable SAR analysis via the average of all individual SAR results, but due to the overlap between the runs, multiple runs cannot be used in the same manner as multiple hierarchical levels of method 'clusters' to run a cSAR analysis. The latter allows for the discrimination of habitat quality alongside spatial variance: the cSAR analysis does not simply compare the species richness of each cluster within each level, it also compares the habitat mosaics of all the clusters within a hierarchical level to assess the habitat affinity of each species group to the available habitats. In contrast, the classic SAR only projects the species richness depending on the total area available and only discriminates between a fully suitable habitat where a species can occur, and a fully unsuitable habitat where a species can't occur. The habitat qualities do not matter in this analysis.
 
 For the classic SAR analysis and based on the species-area-relationship model of
 
-$$S = c * A^z$$
+$$S = c * A^z$$\$\$S = c \* A\^z\$\$\$\$S = c \* A\^z\$\$
 
 where *S* is species richness, *A* is the sampled area, *z* is the species accumulation rate (slope), and *c* is the species richness at unit area (intercept). The function fits a log-log scaled standard linear regression model to the sampled species data, which is defined as:
 
@@ -182,11 +182,7 @@ The cSAR model extends the classic SAR formula by replacing the total area A wit
 
 $$S_i(A_1, A_2, \ldots, A_n) = c_i \left( \sum_{j=1}^{n} h_{ij} A_j \right)^z$$
 
-where *n* is the number of habitat types,*h~ij~* is the affinity of the species group *i* to habitat *j*, *Aj* the area of habitat *j*, and *c~i~* measures the relative local abundance of each species group *i* (Martins and Pereira, 2017)
-
-As with the classic SAR, S is the species richness of the group and z the species accumulation rate (slope).
-
-The detailed difference between both SAR models is described in *Matthews, sars package vignette*,
+where *n* is the number of habitat types,*h~ij~* is the affinity of the species group *i* to habitat *j*, *A~j~* the area of habitat *j*, and *c~i~* measures the relative local abundance of each species group *i* (Martins and Pereira, 2017). As with the classic SAR, S is the species richness of the group and z the species accumulation rate (slope).
 
 The cSAR analysis then fits the following non-linear regression model to the sampled data of each species group for each habitat to determine the affinities of all species groups to all available habitats.
 
@@ -194,122 +190,173 @@ $$S \sim (h_1 \times A_1 + h_2 \times A_2 + h_3 \times A_3)^z$$
 
 # 3. Output
 
-The output of an analysis using 'circles' is almost identical to the 'clusters' analysis. Both are large lists containing information about the method used, a **results table**, which holds the aggregated species and area data (per habitat and group as well as total sum) for either each circle or each cluster, the **results of the standard SAR and cSAR analysis** with the corresponding model data, a list with the **samples** of each sampling occurrence, both binary species data for each level as well as the polygon used to sample the data of this particular level (either a circle or the polygon around a cluster) and a list with the **sf transformed input species data** (points_sf for "circles" and squares_sf for "clusters") with the added coordinate column of each sampling location (s. 2.1 General Workflow). As for "circles" the output includes information about the polygon hull that defines the sampling area within **convex_hull**, "clusters" on the other hand holds information about the polygon around the clusters of each level in **clusters_chulls**.
+The output of an analysis using "circles" is almost identical to the 'clusters' analysis. Both are large lists containing information about the method used, a **results table**, which holds the aggregated species and area data (per habitat and group as well as total sum) for either each circle or each cluster, the **results of the standard SAR and cSAR analysis** with the corresponding model data, a list with the **samples** of each sampling occurrence, both binary species data for each level as well as the polygon used to sample the data of this particular level (either a circle or the polygon around a cluster) and a list with the **sf transformed input species data** (points_sf for "circles" and squares_sf for "clusters") with the added coordinate column of each sampling location (s. 2.1 General Workflow). As for "circles" the output includes information about the polygon hull that defines the sampling area within **convex_hull**, "clusters" on the other hand holds information about the polygon around the clusters of each level in **clusters_chulls**.
 
 To manually inspect both results table structures, please consult the provided examples in 5.
 
 ## 3.1 Circles
 
-![Table 3: Results Table Method 'Circles'](images/restable_circles.jpg){width="636"}
+![Table 3: Results Table Method "Circles"](images/restable_circles.jpg){width="636"}
 
 ## 3.2 Clusters
 
-The output of "clusters" is not nested as it can only contain the results of a single run. Outside of that, the general structure is the same as the one of "circles".
+The output of method 'clusters' is not nested as it can only contain the results of a single run. Outside of that, the general structure is the same as the output of "circles".
 
 ![Output List Clusters](images/resoverview_clusters.jpg){width="499"}
 
-The results_table contains the aggregated species data. Be mindful as the rows are continuous, therefore all clustering levels follow one another without
+The results_table contains the aggregated species data. Note that the rows are continuous; all clustering levels follow one another without interruption.
 
-Aside from the columns for the area of each habitat type, two columns relate to areas: Area_Total, which is the aggregated sum of the calculated area based on the rasters resolution and Polygon_Area, which is the area of the polygon around a cluster. Ideally, the values of these columns are very similar. Use this as a control to make sure the function doesn't over- or underestimate the habitat areas.
+Aside from the columns for the area of each habitat type, two columns relate to areas: Area_Total, which is the aggregated sum of the calculated area and Polygon_Area, which is the area of the polygon defining the boundary of a cluster. Ideally, the values in these columns should be very similar. Use this as a control to make sure the function doesn't over- or underestimate the habitat areas.
 
 # 4. Visualization using visuals_sar
 
-The visuals_sar function does not add any further analysis and only serves as a quick way to plot the results of the countryside_sar function. As such it only includes the absolute minimum of possible plot modifications of both a map for the sampling layout as well as the results of the SAR analysis. The user can of course always plot these results using their own methods.
+The `visuals_sar()` function does not add any further analysis and only serves as a quick way to plot the results of the `countryside_sar()` function. As such it only includes the absolute minimum of possible plot modifications of both a map for the sampling layout as well as the results of the SAR analysis. The user can, of course, always plot these results using their own methods.
 
-Generally, there are three possible plots that can be generated: a map, a SAR plot and a cSAR habitat affinity heatmap.
+In total, the function can generate 6 different plots:
+
+- **`map`**: Map of the sampling layout, showing either the sampling circles over the points within the polygon hull boundary, or the level-wise clusters
+
+- **`sar`**: log-log scaled scatterplot of the classic species-area relationship
+
+- **`csar`**: log-log scaled scatterplot of the effective habitat area against observed species richness per species group
+
+- **`affinities`**: Heatmap displaying the affinity of each species group to each habitat type
+
+- **`habitat_proportion`**: Line plots showing the effect of changing the proportion of a specific habitat on species richness per group
+
+- **`fit`**: Scatterplot of predicted vs. observed total species richness to assess model fit
+
+`visuals_sar()` requires the following parameters:
 
 | Parameter | Description | Method |
-|------------------------|------------------------|------------------------|
-| result | Output from countryside_sar | Both |
-| plot_type | The type of plot to be generated: "map" of all sampling circles or of all hierarchical levels, "sar" for individual or average SAR analysis, "csar" for a habitat affinity heatmap of method clusters | Both |
-| plot_all_runs | Plot all iterations into one grid, defaults to TRUE | Circles |
-| plot_run_n | Plot only one specific iteration, defaults to NULL | Circles |
-| plot_all_levels | Plot all hierarchical levels into one grid, defaults to TRUE | Clusters |
-| plot_level_n | Plot only one specific level, defaults to NULL | Clusters |
+|------------------|-------------------------------------|------------------|
+| result | Output from `countryside_sar()` | Both |
+| plot_type = "map" | Map of sampling locations, either with sampling circles or clusters | Both |
+| plot_type = "sar" | Scatterplot of the species-area-relationship (SAR); log-log scaled | Both |
+| plot_type = "csar" | Scatterplot of the countryside species-area relationship (cSAR) with effective area; log-log, faceted by species group; equivalent to `sars` type 4 plot of `plot.habitat()` | Clusters |
+| plot_type = "affinities" | Heatmap of habitat affinities across species groups | Clusters |
+| plot_type = "fit" | Scatterplot of predicted vs. observed total species richness; equivalent to `sars` type 1 plot of `plot.habitat()` | Clusters |
+| plot_type = "habitat_proportion" | Line plot of predicted species richness along a habitat proportion gradient; equivalent to `sars` type 3 plot of `plot.habitat()` | Clusters |
+| plot_all_runs | Plot all iterations into one grid, defaults to TRUE; belongs to `plot_type = "map"` | Circles |
+| plot_run_n | Plot only one specific iteration, defaults to NULL; belongs to `plot_type = "map"` | Circles |
+| plot_all_levels | Plot all hierarchical levels into one grid, defaults to TRUE; belongs to `plot_type = "map"` | Clusters |
+| plot_level_n | Plot only one specific level, defaults to NULL; belongs to `plot_type = "map"` | Clusters |
+| focal_habitat | The habitat whose proportion is varied on the x-axis, defaults to NULL (plots all habitats); belongs to `plot_type = "habitat_proportion"` | Clusters |
+| total_area | The fixed total area at which habitat proportions are varied, defaults to the maximum observed area; belongs to `plot_type = "habitat_proportion"` | Clusters |
 
-## 4.1 Map Plot
+## 4.1 Circles Visualization
 
-### 4.1.1 Circles
+The results of method "circles" may be plotted in two different ways: a **map plot** of the sampling and a **scatterplot** of the species-area-relationship.
 
-![Figure 5: Example Plot of 6 Circles Runs](images/circles_map.jpeg)
+### 4.1.1 Map Plot
+
+Using
 
 ```{r}
-# visuals_sar(res, plot_type = "map")
+# visuals_sar(res_ci, plot_type = "map")
 ```
 
-The line above creates a map of each individual iteration of method 'circles' with the corresponding run number. To plot only one specific run, in the example run number 3, use:
+creates a map of each individual individual run of method "circles" with the corresponding run number. It allows for a quick visual check of sampling success: here, 5 out of 6 runs could sample to the full extent, run 4 initiated the break protocol early on, likely due to sampling locations near the hull boundary.
+
+![](images/circles_map.png){width="632"}
+
+To plot only one specific run, in the example run number 3, use the parameter `plot_run_n = 3:`
 
 ```{r}
-# visuals_sar(res, plot_type = "map", plot_all_runs = FALSE, plot_run_n = 3)
+# visuals_sar(res_ci, plot_type = "map", plot_run_n = 3)
 ```
 
-### 4.1.2 Clusters
+![](images/circles_single_run.png){width="468"}
+
+### 4.1.2 SAR Scatterplot
+
+`visuals_sar()` offers three different ways to plot the results of the classic SAR model: either the plots of each individual run, single or displayed in a grid, or the averaged SAR result across all valid runs. If a run did not contain a sufficient amount of samples for the SAR model, the corresponding run is marked as invalid in the grid of individual run plots.
+
+The legend displays the fitted regression equation, the scaling exponent (z), and the model fit.
+
+```{r}
+# visuals_sar(res_ci, plot_type = "sar")
+```
+
+![](images/circles_sar_grid.png)
+
+For the SAR result of a specific run, use the parameter `plot_run_n`:
+
+```{r}
+# visuals_sar(res_ci, plot_type = "sar", plot_run_n = 2)
+```
+
+![](images/sar_single_run_circles.png){width="509"}
+
+The final plot option is the average SAR result of all "circles" runs of a single call. It contains the fitted regression equation, the mean scaling exponent, the average model fit and the number of runs used to calculate the values.
+
+```{r}
+# visuals_sar(res_ci, plot_type = "sar", plot_average = TRUE)
+```
+
+![](images/circles_sar_average.png)
+
+## 4.2 Clusters
+
+### 4.2.1 Map Plot
+
+Similar to "circles", the map of a "clusters" result can display either all levels of sampling clusters in a single grid using
+
+```{r}
+# visuals_sar(res_cl, plot_type = "map")
+```
 
 ![](images/clipboard-517862893.png)
 
-In the same manner as for a result of method circles, a map that displays a plot for each hierarchical level of a clusters analysis may be called using:
+Or a map of a specific level, in this example level 4, which corresponds to size 64:
 
 ```{r}
-# visuals_sar(res, plot_type = "map")
+# visuals_sar(res_cl, plot_type = "map", plot_level_n = 64)
 ```
 
-Or a map of level 4 (size 64) only using:
+![](images/clusters_level_only_map.png){width="489"}
+
+### 4.2.2 SAR Plot
+
+To produce a classic SAR scatterplot for the "clusters" method, use:
 
 ```{r}
-# visuals_sar(res, plot_type = "map", plot_all_levels = FALSE, plot_level_n = 64)
+# visuals_sar(res_cl, plot_type = "sar")
 ```
 
-## 4.2 SAR Plot
+![](images/SAR_clusters.png)
 
-### 4.2.1 Base SAR Circles
+It displays the log-log relationship between the total area of the clusters (x-axis) and the total observed species richness within those clusters (y-axis). Each point corresponds to a single cluster at a given level, with the distinct 'clouds' of points representing the stepwise increase in cluster area across levels. The red line indicates the fitted linear regression with the resulting regression equation, scaling exponent and model fit provided in the legend.
 
-Visuals_sar offers two different ways to plot the results of the classic SAR model: either the plots of each individual run or the average SAR result.
+### 4.2.3 cSAR Plot
 
-```{r}
-# visuals_sar(res, plot_type = "sar")
-```
+In total `visuals_sar()` offers four ways to visualize the cSAR results of method "clusters":
 
-![Figure 7: Base SAR Plot Method 'Circles' for n_runs = 1](images/sar_circles_singlerun.jpeg){width="620"}
-
-If countryside_sar was used for only one iteration, the visuals_sar output will be a single plot as in figure X, given multiple iterations it will create a grid of all SAR results.
-
-![Figure 8: Base SAR Plot Method 'Circles' for n_runs = 6](images/Rplot02.jpeg)
-
-To plot the average SAR result of multiple iterations, use:
-
-![Figure 9: Base SAR Plot Method 'Circles' for average of n_runs = 6](images/Rplotavg-01.jpeg)
-
-### 4.2.2 Base SAR Clusters
-
-![Figure 10: Base SAR Plot Method 'Clusters'](images/csarclusters.jpeg)
-
-For method clusters only one possible SAR plot
-
-## 4.2.3 Countryside SAR
-
-The affinity data of the cSAR analysis are visualized using a heatmap. It displays the affinities of the species groups to the different habitat types, 1 being a high affinity, 0 meaning no affinity towards the habitat type at all.
+- **Affinity Heatmap**: Displays the affinities of the species groups to the different habitat types, 1 being a perfect habitat, 0 meaning no affinity towards the habitat type at all and intermediate values indicating different degrees of habitat utilization.
 
 ```{r}
-# visuals_sar(test_clusters, plot_type = "csar")
+# visuals_sar(res_cl, plot_type = "affinities")
 ```
 
 ![](images/csar_aff.jpeg)
 
-The full model summary can be called using:
+- **Effective Area**: Shows the log-log relationship between the effective area (the sum of habitat areas weighted by their affinity) and observed species richness for each species group, faceted by group. Points represent individual sampled landscapes, and the red line indicates the fitted power-law regression. The legend reports the model fit and the scaling exponent with its standard error. It is based on the type 4 plot of `plot.habitat()` of the `sars` package (v2.1.1, Matthews et al., 2019).
 
-```{r}
-#result[["csar_analysis"]][["model"]]
-```
+![](images/effective_area_clusters.png)
+
+- **Model Fit:** A predicted vs. observed scatterplot of total species richness. Each point is a sampled landscape, placed by its cSAR-predicted richness (x-axis) against its observed richness (y-axis). A dashed red 1:1 line serves as the reference for perfect prediction. The legend reports the model fit, RMSE, and the slope of the observed vs. predicted relationship to assess model accuracy and calibration. Based on the type 1 plot of `plot.habitat()` of the `sars` package (v2.1.1, Matthews et al., 2019).
+
+![](images/fit_clusters.png){width="553"}
+
+- **Habitat Proportion:** Line plots showing how predicted species richness for each group responds as the proportion of a focal habitat is varied from 0 to 1, holding total area constant (fixed at the largest observed site). One panel is shown per habitat, with all species groups drawn as separate lines. When `focal_habitat` is set, only that habitat's panel is plotted. Based on the type 3 plot of `plot.habitat()` of the `sars` package (v2.1.1, Matthews et al., 2019).
+
+![](images/habitat_prop_clusters.png)
 
 # 5. Examples: Full Analysis
 
-To familiarize you with the workflow of csarGeo, this section contains a full example analysis for either sampling method
+To familiarize you with the workflow of csarGeo, this section contains a full example analysis for either sampling method with all possible visualization options.
 
-The csarGeo package contains three files that may be used to run the analysis examples of 5.1 and 5.2.
-
-```{r}
-
-```
+The csarGeo package contains three files that may be used to run the analysis examples of 5.1 and 5.2., all of which are loaded at the beginning of both example analyses.
 
 ## 5.1 Circles
 
@@ -335,9 +382,11 @@ res_ci <- countryside_sar(
 # Visualization using visuals_sar
 # Map plot
 visuals_sar(res_ci, plot_type = "map")
+visuals_sar(res_ci, plot_type = "map", plot_run_n = 2)
 
 # SAR
 visuals_sar(res_ci, plot_type = "sar")
+visuals_sar(res_ci, plot_type = "sar", plot_average = TRUE)
 ```
 
 ## 5.2 Clusters
@@ -363,12 +412,23 @@ res_cl <- countryside_sar(
 # Visualization using visuals_sar
 # Map plot
 visuals_sar(res_cl, plot_type = "map")
+visuals_sar(res_cl, plot_type = "map", plot_level_n = 64)
 
 # SAR
 visuals_sar(res_cl, plot_type = "sar")
 
-# cSAR - habitat affinities
+# cSAR - effective area
 visuals_sar(res_cl, plot_type = "csar")
+
+# csar habitat affinities
+visuals_sar(res_cl, plot_type = "affinities")
+
+# csar model fit
+visuals_sar(res_cl, plot_type = "fit")
+
+# habitat proportion
+visuals_sar(res_cl, plot_type = "habitat_proportion")
+visuals_sar(res_cl, plot_type = "habitat_proportion", focal_habitat = "Agriculture")
 ```
 
 # 6. References
