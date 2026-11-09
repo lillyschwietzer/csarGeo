@@ -150,8 +150,17 @@ visuals_sar(res_cl, plot_type = "map")
 # SAR plot
 visuals_sar(res_cl, plot_type = "sar")
 
-# Species affinity heatmap
+# Observed Species Richness vs. Effective Habitat Area
 visuals_sar(res_cl, plot_type = "csar")
+
+# Species affinity heatmap
+visuals_sar(res_cl, plot_type = "affinities")
+
+# Habitat Proportion
+visuals_sar(res_cl, plot_type = "habitat_proportion")
+
+# Model Fit
+visuals_sar(res_cl, plot_type = "fit")
 ```
 
 # 3. References
