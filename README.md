@@ -129,13 +129,19 @@ groups = c("Forest_Sp", "Grassland_Sp", "generalists_Sp")
 
 ## 2.2) Visualization Function visuals_sar()
 
-The second function, `visuals_sar()`, offers three possible plot options for the results of `countryside_sar()`:
+The second function, `visuals_sar()`, offers six possible plot options for the results of `countryside_sar()`:
 
 - "map" - Map of all clustering levels
 
 - "sar" - Species-area-relationship plot
 
-- "csar" - species habitat affinity heatmap
+- "csar" - observed species richness per species group vs. effective habitat area
+
+- "affinities" - species habitat affinity heatmap per group
+
+- "habitat_proportion" - predicted species richness per group vs. habitat proportion
+
+- "fit" - observed vs. predicted species richness
 
 ```{r}
 # Map of all cluster levels
