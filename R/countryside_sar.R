@@ -54,6 +54,9 @@
 #' @param groups Character vector specifying which columns from \code{classification} to use as species groups. If \code{groups = NULL} (default), all group columns are used for analysis.
 #' @param seed Optional integer for reproducibility, defaults to \code{NULL}.
 #' @param n_runs Integer value, number of iterations for \code{method = "circles"}. Each run uses a different random starting point for the expanding circles. For \code{method = "clusters"}, this parameter is ignored as clustering is deterministic. Default value \code{n_runs = 1}.
+#' @param grid_start Character. Controls how \pkg{sars} searches for starting values when fitting the cSAR model. One of \code{"partial"} (default; small grid search), \code{"exhaustive"} (wider search, slower), or \code{"none"} (no grid search; requires \code{start_par}). Passed to \code{sars::sar_countryside()} as \code{gridStart}. Ignored when \code{start_par} is non-\code{NULL}.
+#' @param start_par Optional numeric matrix of starting values for the cSAR model, with one row per species group and one column per habitat plus one final column for the scaling exponent \code{z}. Column order must match \code{habitat_names} followed by \code{z}; row order must match the species group order in \code{groups}. Passed to \code{sars::sar_countryside()} as \code{startPar}; if supplied, \code{grid_start} is ignored. See the \pkg{sars} documentation for details. Defaults to \code{NULL}.
+#' @param z_lower Numeric. Lower bound for the scaling exponent \code{z} during model fitting. Passed to \code{sars::sar_countryside()} as \code{zLower}. Defaults to \code{0}.
 #'
 #' @return A list containing the method used, the number of runs n_runs, the sampling data of each run, the sf-transformed input data with an added geometry column as well as information about the convex hull. The sampling data of each run contains a results_table of aggregated habitat area data and species richness data. It further contains the SAR analysis result and linear model summary as well as geometry data of each circle or cluster and species data within each circle or cluster level.
 #' @export
@@ -87,7 +90,11 @@ countryside_sar <- function(
     classification = NULL,
     groups = NULL,
     seed = NULL,
-    n_runs = 1
+    n_runs = 1,
+    # csar fiting params
+    grid_start = "partial",
+    start_par  = NULL,
+    z_lower    = 0
 ) {
 
   # create vector for habitat codes of the raster
@@ -199,6 +206,26 @@ countryside_sar <- function(
   if (length(missing_cols) > 0)
     stop("The following group columns are not in classification: ",
          paste(missing_cols, collapse = ", "))
+
+  # cSAR fitting options validation
+  if (!is.null(grid_start) &&
+      (!is.character(grid_start) || length(grid_start) != 1 ||
+       !grid_start %in% c("partial", "exhaustive", "none"))) {
+    stop("'grid_start' must be one of 'partial', 'exhaustive', or 'none'.")
+  }
+
+  if (!is.null(start_par)) {
+    if (!is.matrix(start_par) || !is.numeric(start_par)) {
+      stop("'start_par' must be a numeric matrix, or NULL.")
+    }
+    if (anyNA(start_par) || any(!is.finite(start_par))) {
+      stop("'start_par' contains NA or non-finite values.")
+    }
+  }
+
+  if (!is.numeric(z_lower) || length(z_lower) != 1 || is.na(z_lower)) {
+    stop("'z_lower' must be a single numeric value.")
+  }
 
   #---------------------------- 3. Helper functions ----------------------------
 
@@ -505,7 +532,10 @@ countryside_sar <- function(
   #-------------------------- cSAR Analysis Function ---------------------------
   analyze_countryside_sar <- function(csar_data,
                                       habitat_names,
-                                      species_group_names)
+                                      species_group_names,
+                                      grid_start = "partial",
+                                      start_par  = NULL,
+                                      z_lower    = 0)
   {
     csar_results <- list()
     csar_results$valid <- FALSE
@@ -517,6 +547,21 @@ countryside_sar <- function(
       return(csar_results)
     }
 
+    # Validate start_par dimensions if provided
+    if (!is.null(start_par)) {
+      n_groups   <- length(species_group_names)
+      n_habitats <- length(habitat_names)
+      if (nrow(start_par) != n_groups ||
+          ncol(start_par) != (n_habitats + 1)) {
+        csar_results$message <- paste0(
+          "'start_par' must have ", n_groups, " rows (one per species group) and ",
+          n_habitats + 1, " columns (one per habitat plus one for z). Got ",
+          nrow(start_par), " x ", ncol(start_par), "."
+        )
+        return(csar_results)
+      }
+    }
+
     tryCatch(
       {
         if (!requireNamespace("sars", quietly = TRUE))
@@ -526,11 +571,13 @@ countryside_sar <- function(
         }
 
         csar_results$model <- sars::sar_countryside(
-          data = csar_data,
-          modType = "power",
-          gridStart = "partial",
-          habNam = habitat_names,
-          spNam = species_group_names
+          data      = csar_data,
+          modType   = "power",
+          gridStart = grid_start,
+          startPar  = start_par,
+          zLower    = z_lower,
+          habNam    = habitat_names,
+          spNam     = species_group_names
         )
 
         csar_results$valid <- TRUE
@@ -545,6 +592,7 @@ countryside_sar <- function(
 
     return(csar_results)
   }
+
   #---------------------------- 4. Main processing -----------------------------
   points_sf <- sf::st_as_sf(data,
                             coords = c("long", "lat"),
@@ -757,7 +805,10 @@ countryside_sar <- function(
 
     csar_analysis <- analyze_countryside_sar(csar_data,
                                              habitat_names,
-                                             species_group_names)
+                                             species_group_names,
+                                             grid_start = grid_start,
+                                             start_par  = start_par,
+                                             z_lower    = z_lower)
     # --------- Step 5: Return Results --------
     # result table
     res <- list(

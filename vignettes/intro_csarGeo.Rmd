@@ -126,7 +126,7 @@ A full analysis example is provided in 5.1.
 To use the first pathway, "circles", the user may choose from the following parameters:
 
 | Parameter | Description | Necessary |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | data | binary species data and sampling location latitude and longitude | Non-optional |
 | method | defines "circles" as sampling method | Non-optional |
 | radius | Defines the radius size as well as the total amount of circles for method: "Circles" | Non-optional |
@@ -152,7 +152,7 @@ Each level of the clusters method aggregates sampling locations and their specie
 For this analysis pathway, `countryside_SAR()` requires the following parameters:
 
 | Parameter | Description | Necessary |
-|------------------------|------------------------|------------------------|
+|----|----|----|
 | data | binary species data and sampling location latitude and longitude | Non-optional |
 | method | defines "clusters" as sampling method | Non-optional |
 | square_size | The size of the square buffer for each sampling point for method "Clusters". | Non-optional |
@@ -229,7 +229,7 @@ In total, the function can generate 6 different plots:
 `visuals_sar()` requires the following parameters:
 
 | Parameter | Description | Method |
-|------------------|-------------------------------------|------------------|
+|----|----|----|
 | result | Output from `countryside_sar()` | Both |
 | plot_type = "map" | Map of sampling locations, either with sampling circles or clusters | Both |
 | plot_type = "sar" | Scatterplot of the species-area-relationship (SAR); log-log scaled | Both |
